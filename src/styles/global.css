@@ -1,0 +1,198 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/bricolage-grotesque';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: 'Bricolage Grotesque Variable', var(--font-sans);
+  --font-sans: 'Geist Variable', sans-serif;
+
+  /* Pastel accent palette (fill + foreground pairs) — the warm "Intelly" look.
+     Charts reference --chart-1..5 (remapped to these below) so hand-rolled
+     data-viz picks up colour automatically. */
+  --color-accent-yellow: var(--accent-yellow);
+  --color-accent-yellow-foreground: var(--accent-yellow-foreground);
+  --color-accent-pink: var(--accent-pink);
+  --color-accent-pink-foreground: var(--accent-pink-foreground);
+  --color-accent-green: var(--accent-green);
+  --color-accent-green-foreground: var(--accent-green-foreground);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-blue-foreground: var(--accent-blue-foreground);
+  --color-accent-lilac: var(--accent-lilac);
+  --color-accent-lilac-foreground: var(--accent-lilac-foreground);
+
+  /* Soft, low, diffuse card shadows (previously only a hairline ring). */
+  --shadow-card: 0 1px 2px oklch(0.2 0.02 70 / 4%), 0 8px 24px -12px oklch(0.2 0.02 70 / 12%);
+  --shadow-card-lg: 0 2px 4px oklch(0.2 0.02 70 / 5%), 0 16px 40px -16px oklch(0.2 0.02 70 / 16%);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Warm cream canvas; cards sit slightly lighter/warmer than the background. */
+  --background: oklch(0.968 0.012 85);
+  --foreground: oklch(0.24 0.015 65);
+  --card: oklch(0.995 0.005 85);
+  --card-foreground: oklch(0.24 0.015 65);
+  --popover: oklch(0.995 0.005 85);
+  --popover-foreground: oklch(0.24 0.015 65);
+  /* Primary stays near-black (warm) like the reference's black buttons. */
+  --primary: oklch(0.24 0.012 65);
+  --primary-foreground: oklch(0.98 0.008 85);
+  --secondary: oklch(0.94 0.012 85);
+  --secondary-foreground: oklch(0.24 0.015 65);
+  --muted: oklch(0.945 0.01 85);
+  --muted-foreground: oklch(0.53 0.012 70);
+  --accent: oklch(0.93 0.014 85);
+  --accent-foreground: oklch(0.24 0.015 65);
+  --destructive: oklch(0.585 0.2 25);
+  --border: oklch(0.9 0.01 85);
+  --input: oklch(0.9 0.01 85);
+  --ring: oklch(0.78 0.09 85);
+
+  /* Pastel accents (light). */
+  --accent-yellow: oklch(0.92 0.11 95);
+  --accent-yellow-foreground: oklch(0.42 0.09 80);
+  --accent-pink: oklch(0.9 0.07 350);
+  --accent-pink-foreground: oklch(0.46 0.13 355);
+  --accent-green: oklch(0.9 0.08 145);
+  --accent-green-foreground: oklch(0.44 0.09 150);
+  --accent-blue: oklch(0.9 0.06 245);
+  --accent-blue-foreground: oklch(0.46 0.11 255);
+  --accent-lilac: oklch(0.9 0.06 300);
+  --accent-lilac-foreground: oklch(0.47 0.12 300);
+
+  /* Data-viz palette = the five pastels (saturated a touch for legibility). */
+  --chart-1: oklch(0.82 0.14 95);
+  --chart-2: oklch(0.78 0.12 350);
+  --chart-3: oklch(0.78 0.13 145);
+  --chart-4: oklch(0.75 0.11 245);
+  --chart-5: oklch(0.75 0.12 300);
+
+  --radius: 0.9rem;
+
+  /* Sidebar is dark in BOTH themes (reference sidebar is always near-black). */
+  --sidebar: oklch(0.24 0.014 65);
+  --sidebar-foreground: oklch(0.92 0.008 85);
+  --sidebar-primary: oklch(0.9 0.07 350);
+  --sidebar-primary-foreground: oklch(0.26 0.03 355);
+  --sidebar-accent: oklch(0.31 0.014 65);
+  --sidebar-accent-foreground: oklch(0.98 0.008 85);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.9 0.07 350);
+}
+
+.dark {
+  /* Warm charcoal, not pure grey — keeps the palette cohesive in dark mode. */
+  --background: oklch(0.2 0.012 65);
+  --foreground: oklch(0.94 0.008 85);
+  --card: oklch(0.255 0.014 65);
+  --card-foreground: oklch(0.94 0.008 85);
+  --popover: oklch(0.255 0.014 65);
+  --popover-foreground: oklch(0.94 0.008 85);
+  --primary: oklch(0.92 0.01 85);
+  --primary-foreground: oklch(0.24 0.014 65);
+  --secondary: oklch(0.3 0.014 65);
+  --secondary-foreground: oklch(0.94 0.008 85);
+  --muted: oklch(0.3 0.014 65);
+  --muted-foreground: oklch(0.72 0.012 80);
+  --accent: oklch(0.32 0.016 65);
+  --accent-foreground: oklch(0.94 0.008 85);
+  --destructive: oklch(0.7 0.17 22);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.55 0.06 85);
+
+  /* Pastel accents (dark) — slightly deeper/less luminous so text stays legible. */
+  --accent-yellow: oklch(0.5 0.09 90);
+  --accent-yellow-foreground: oklch(0.94 0.06 95);
+  --accent-pink: oklch(0.48 0.11 355);
+  --accent-pink-foreground: oklch(0.93 0.05 350);
+  --accent-green: oklch(0.47 0.09 150);
+  --accent-green-foreground: oklch(0.93 0.06 145);
+  --accent-blue: oklch(0.48 0.1 250);
+  --accent-blue-foreground: oklch(0.92 0.05 245);
+  --accent-lilac: oklch(0.49 0.1 300);
+  --accent-lilac-foreground: oklch(0.93 0.05 300);
+
+  --chart-1: oklch(0.82 0.13 95);
+  --chart-2: oklch(0.76 0.12 350);
+  --chart-3: oklch(0.76 0.12 145);
+  --chart-4: oklch(0.73 0.11 245);
+  --chart-5: oklch(0.74 0.12 300);
+
+  /* Sidebar: a touch darker than cards so the floating panel reads as elevated. */
+  --sidebar: oklch(0.17 0.012 65);
+  --sidebar-foreground: oklch(0.92 0.008 85);
+  --sidebar-primary: oklch(0.5 0.11 355);
+  --sidebar-primary-foreground: oklch(0.95 0.04 350);
+  --sidebar-accent: oklch(0.28 0.014 65);
+  --sidebar-accent-foreground: oklch(0.96 0.008 85);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.5 0.11 355);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  /* Scrolls normally (wheel/touch/keyboard) — just never paints a visible
+     track/thumb. Used where a container needs to scroll but a native
+     scrollbar would clash with a rounded, chrome-less design. */
+  .scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+}

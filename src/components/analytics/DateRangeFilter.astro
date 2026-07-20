@@ -1,0 +1,39 @@
+---
+interface Props {
+  from: string;
+  to: string;
+  hiddenParams?: { name: string; value: string }[];
+}
+
+const { from, to, hiddenParams = [] } = Astro.props;
+
+const inputClass =
+  'h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50';
+
+const clearHref = `?${hiddenParams.map((p) => `${p.name}=${encodeURIComponent(p.value)}`).join('&')}`;
+---
+
+<form method="GET" class="flex flex-wrap items-end gap-2">
+  {hiddenParams.map((p) => <input type="hidden" name={p.name} value={p.value} />)}
+  <label class="text-muted-foreground flex flex-col gap-1 text-xs">
+    Desde
+    <input type="date" name="from" value={from} class={inputClass} />
+  </label>
+  <label class="text-muted-foreground flex flex-col gap-1 text-xs">
+    Hasta
+    <input type="date" name="to" value={to} class={inputClass} />
+  </label>
+  <button
+    type="submit"
+    class="bg-primary text-primary-foreground hover:bg-primary/80 h-8 rounded-lg px-3 text-sm font-medium"
+  >
+    Filtrar
+  </button>
+  {
+    (from || to) && (
+      <a href={clearHref} class="text-muted-foreground text-sm underline underline-offset-2">
+        Limpiar
+      </a>
+    )
+  }
+</form>

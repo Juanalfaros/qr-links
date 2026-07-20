@@ -1,0 +1,44 @@
+---
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Search01Icon } from '@hugeicons/core-free-icons';
+
+interface Props {
+  q: string;
+  sort: string;
+  dir: string;
+  status: string;
+}
+
+const { q, sort, dir, status } = Astro.props;
+
+const inputClass =
+  'h-9 w-full min-w-0 rounded-xl border border-input bg-transparent py-1 pr-2.5 pl-8 text-sm placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50';
+const selectClass =
+  'h-9 shrink-0 rounded-xl border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50';
+---
+
+<form method="GET" class="flex min-w-0 flex-1 flex-wrap items-center gap-2 md:flex-nowrap">
+  <input type="hidden" name="status" value={status} />
+  <div class="relative min-w-[160px] flex-1">
+    <HugeiconsIcon
+      icon={Search01Icon}
+      size={16}
+      className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
+    />
+    <input type="search" name="q" value={q} placeholder="Buscar por título o destino..." class={inputClass} />
+  </div>
+  <select name="sort" class={selectClass} onchange="this.form.submit()">
+    <option value="created_at" selected={sort === 'created_at'}>Más recientes</option>
+    <option value="title" selected={sort === 'title'}>Título</option>
+  </select>
+  <select name="dir" class={selectClass} onchange="this.form.submit()">
+    <option value="desc" selected={dir === 'desc'}>Descendente</option>
+    <option value="asc" selected={dir === 'asc'}>Ascendente</option>
+  </select>
+  <button
+    type="submit"
+    class="bg-primary text-primary-foreground hover:bg-primary/80 h-9 shrink-0 rounded-xl px-3 text-sm font-medium"
+  >
+    Buscar
+  </button>
+</form>

@@ -1,0 +1,7 @@
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Free tier: 3000 emails/month, 100/day, 1 verified domain. Used only by the
+# weekly digest and alert-rule cron jobs (src/lib/cron/*.ts) — leaving this
+# unset just means those emails silently fail to send, nothing else breaks.
+RESEND_API_KEY=your-resend-api-key

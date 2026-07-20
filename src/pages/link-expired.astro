@@ -1,0 +1,29 @@
+---
+import { HugeiconsIcon } from '@hugeicons/react';
+import { HourglassIcon } from '@hugeicons/core-free-icons';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Enlace no disponible">
+  <div class="bg-background relative flex min-h-screen items-center justify-center overflow-hidden p-4">
+    <div
+      class="bg-accent-yellow pointer-events-none absolute -top-24 -left-24 size-96 rounded-full opacity-30 blur-3xl"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="bg-accent-pink pointer-events-none absolute -right-24 -bottom-24 size-96 rounded-full opacity-30 blur-3xl"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="bg-card relative flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl p-8 text-center shadow-[var(--shadow-card-lg)]"
+    >
+      <div class="bg-accent-yellow text-accent-yellow-foreground flex size-12 items-center justify-center rounded-2xl">
+        <HugeiconsIcon icon={HourglassIcon} size={22} />
+      </div>
+      <h1 class="font-heading text-2xl font-semibold">Enlace no disponible</h1>
+      <p class="text-muted-foreground text-sm">Este enlace expiró o alcanzó su límite de usos.</p>
+    </div>
+  </div>
+</BaseLayout>

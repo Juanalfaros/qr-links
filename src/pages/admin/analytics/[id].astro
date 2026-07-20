@@ -1,0 +1,80 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { KpiCards } from '@/components/analytics/KpiCards';
+import { BreakdownCard } from '@/components/analytics/BreakdownCard';
+import { ClicksOverTime } from '@/components/analytics/ClicksOverTime';
+import DateRangeFilter from '@/components/analytics/DateRangeFilter.astro';
+import { fetchLinkAnalytics } from '@/lib/analytics';
+
+const { id } = Astro.params;
+
+// RLS already scopes this to owner-or-superadmin; a non-owner requesting someone
+// else's id simply gets zero rows back, which we treat as 404.
+const { data: link } = await Astro.locals.supabase
+  .from('links')
+  .select('id, title, short_code, destination_url')
+  .eq('id', id)
+  .single();
+
+if (!link) {
+  return Astro.rewrite('/404');
+}
+
+const from = Astro.url.searchParams.get('from') ?? '';
+const to = Astro.url.searchParams.get('to') ?? '';
+const fromIso = from ? new Date(from).toISOString() : null;
+const toIso = to ? new Date(`${to}T23:59:59.999Z`).toISOString() : null;
+
+const stats = await fetchLinkAnalytics(Astro.locals.supabase, id!, fromIso, toIso);
+
+const topCountry = stats.byCountry[0]?.label ?? 'N/A';
+const topDevice = stats.byDevice[0]?.label ?? 'N/A';
+
+const rangeParams = new URLSearchParams();
+if (from) rangeParams.set('from', from);
+if (to) rangeParams.set('to', to);
+const exportHref = `/api/analytics/${id}/export.csv${rangeParams.size > 0 ? `?${rangeParams}` : ''}`;
+const exportPdfHref = `/api/analytics/${id}/export.pdf${rangeParams.size > 0 ? `?${rangeParams}` : ''}`;
+---
+
+<DashboardLayout title={`Analíticas · ${link.title}`}>
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <DateRangeFilter from={from} to={to} />
+      <div class="flex items-center gap-3">
+        <a
+          href={`/admin/analytics/compare?ids=${id}`}
+          class="text-muted-foreground text-sm underline underline-offset-2"
+        >
+          Comparar con otros links
+        </a>
+        <a
+          href={exportHref}
+          class="border-input hover:bg-accent h-8 rounded-lg border px-3 text-sm leading-8 font-medium"
+        >
+          Exportar CSV
+        </a>
+        <a
+          href={exportPdfHref}
+          class="border-input hover:bg-accent h-8 rounded-lg border px-3 text-sm leading-8 font-medium"
+        >
+          Exportar PDF
+        </a>
+      </div>
+    </div>
+    <KpiCards
+      client:visible
+      totalClicks={stats.total}
+      uniqueClicks={stats.unique}
+      topCountry={topCountry}
+      topDevice={topDevice}
+    />
+    <ClicksOverTime client:visible series={[{ label: link.title, days: stats.days }]} />
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <BreakdownCard client:visible title="Por país" items={stats.byCountry} accent="chart-1" />
+      <BreakdownCard client:visible title="Por dispositivo" items={stats.byDevice} accent="chart-2" />
+      <BreakdownCard client:visible title="Por referrer" items={stats.byReferrer} accent="chart-3" />
+      <BreakdownCard client:visible title="Por canal" items={stats.byChannel} accent="chart-4" />
+    </div>
+  </div>
+</DashboardLayout>

@@ -1,0 +1,24 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { ApiTokensManager } from '@/components/admin/ApiTokensManager';
+import type { ApiTokenRow } from '@/lib/types';
+
+const { data } = await Astro.locals.supabase
+  .from('api_tokens')
+  .select('id, name, last_used_at, revoked_at, created_at')
+  .order('created_at', { ascending: false });
+
+const tokens: ApiTokenRow[] = data ?? [];
+---
+
+<DashboardLayout title="Tokens de API">
+  <div class="flex flex-col gap-4">
+    <p class="text-muted-foreground text-sm">
+      Usa un token para crear y listar tus links desde un script externo, sin pasar por la sesión del navegador. Ver la <a
+        href="/admin/api-docs"
+        class="underline underline-offset-2">documentación de la API</a
+      >.
+    </p>
+    <ApiTokensManager client:load initialTokens={tokens} />
+  </div>
+</DashboardLayout>

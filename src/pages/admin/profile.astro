@@ -1,0 +1,86 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { ProfileHeaderCard } from '@/components/profile/ProfileHeaderCard';
+import { ProfileStatsRow } from '@/components/profile/ProfileStatsRow';
+import { RecentLinksList } from '@/components/profile/RecentLinksList';
+import { AccountSecurityCard } from '@/components/profile/AccountSecurityCard';
+import type { ProfileRow } from '@/lib/types';
+
+const userId = Astro.locals.user!.id;
+
+const { data: profile } = await Astro.locals.supabase
+  .from('profiles')
+  .select('id, email, role, created_at, full_name, avatar_url, department_id, suspended_at')
+  .eq('id', userId)
+  .single();
+
+const typedProfile = profile as ProfileRow;
+
+const startOfMonth = new Date();
+startOfMonth.setDate(1);
+startOfMonth.setHours(0, 0, 0, 0);
+
+const [
+  { data: department },
+  { data: recentLinksData },
+  { count: totalLinks },
+  { data: allClicks },
+  { count: linksThisMonth },
+  { count: tokenCount },
+] = await Promise.all([
+  typedProfile.department_id
+    ? Astro.locals.supabase.from('departments').select('id, name').eq('id', typedProfile.department_id).single()
+    : Promise.resolve({ data: null }),
+  Astro.locals.supabase
+    .from('links')
+    .select('id, title, short_code, created_at, click_count')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(5),
+  Astro.locals.supabase
+    .from('links')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('deleted_at', null),
+  // No SUM() aggregate available through the query builder without a new
+  // RPC/view — for a single user's own links this is a small, bounded list,
+  // so summing click_count client-side is simpler than adding schema just
+  // for this personal-stats card.
+  Astro.locals.supabase.from('links').select('click_count').eq('user_id', userId).is('deleted_at', null).limit(1000),
+  Astro.locals.supabase
+    .from('links')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .gte('created_at', startOfMonth.toISOString()),
+  // RLS (api_tokens_select_own) already scopes this to the caller.
+  Astro.locals.supabase.from('api_tokens').select('id', { count: 'exact', head: true }).is('revoked_at', null),
+]);
+
+const totalClicks = (allClicks ?? []).reduce((sum, l) => sum + (l.click_count ?? 0), 0);
+
+let mfaEnabled = false;
+if (typedProfile.role === 'superadmin') {
+  const { data: factorsData } = await Astro.locals.supabase.auth.mfa.listFactors();
+  mfaEnabled = (factorsData?.totp ?? []).some((f) => f.status === 'verified');
+}
+---
+
+<DashboardLayout title="Mi perfil">
+  <div class="flex flex-col gap-4">
+    <ProfileHeaderCard client:load profile={typedProfile} departmentName={department?.name ?? null} />
+    <ProfileStatsRow
+      totalLinks={totalLinks ?? 0}
+      totalClicks={totalClicks}
+      linksThisMonth={linksThisMonth ?? 0}
+      tokenCount={tokenCount ?? 0}
+    />
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div class="lg:col-span-2">
+        <RecentLinksList links={recentLinksData ?? []} />
+      </div>
+      <AccountSecurityCard profile={typedProfile} departmentName={department?.name ?? null} mfaEnabled={mfaEnabled} />
+    </div>
+  </div>
+</DashboardLayout>

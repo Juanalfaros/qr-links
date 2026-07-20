@@ -1,0 +1,122 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { SuperadminTabs } from '@/components/admin/SuperadminTabs';
+import { getPageFromSearchParams, getRange } from '@/lib/pagination';
+import { fetchCompanyAnalytics } from '@/lib/analytics';
+import type {
+  AlertRuleRow,
+  AuditLogQueryRow,
+  AuditLogRow,
+  GlobalLinkQueryRow,
+  GlobalLinkRow,
+  ProfileRow,
+} from '@/lib/types';
+
+const { data: profiles } = await Astro.locals.supabase
+  .from('profiles')
+  .select('id, email, role, created_at, full_name, avatar_url, department_id, suspended_at')
+  .order('created_at', { ascending: false });
+
+const { data: departmentsData } = await Astro.locals.supabase.from('departments').select('id, name').order('name');
+
+const { data: allowedDomainsData } = await Astro.locals.supabase
+  .from('allowed_domains')
+  .select('id, domain')
+  .order('domain');
+
+const { data: blockedPatternsData } = await Astro.locals.supabase
+  .from('blocked_url_patterns')
+  .select('id, pattern')
+  .order('pattern');
+
+const { data: alertRulesData } = await Astro.locals.supabase
+  .from('alert_rules')
+  .select('id, link_id, threshold_count, window_hours, notify_email, last_triggered_at, created_at')
+  .order('created_at', { ascending: false });
+
+const { data: auditLogData } = await Astro.locals.supabase
+  .from('audit_log')
+  .select('id, action, target_table, target_id, metadata, created_at, profiles(email)')
+  .order('created_at', { ascending: false })
+  .limit(100);
+
+const page = getPageFromSearchParams(Astro.url.searchParams);
+const [from, to] = getRange(page);
+
+const { data: linksData, count } = await Astro.locals.supabase
+  .from('links')
+  .select(
+    'id, title, short_code, destination_url, created_at, deleted_at, is_pinned, expires_at, max_clicks, click_count, password_hash, show_interstitial, webhook_url, ga_tracking_id, analytics(count), profiles(email)',
+    { count: 'exact' },
+  )
+  .is('deleted_at', null)
+  .order('created_at', { ascending: false })
+  .range(from, to);
+
+const users: ProfileRow[] = profiles ?? [];
+const departments = departmentsData ?? [];
+const allowedDomains = allowedDomainsData ?? [];
+const blockedPatterns = blockedPatternsData ?? [];
+const alertRules: AlertRuleRow[] = alertRulesData ?? [];
+
+const auditLog: AuditLogRow[] = ((auditLogData ?? []) as AuditLogQueryRow[]).map((row) => ({
+  id: row.id,
+  actor_email: row.profiles?.[0]?.email ?? null,
+  action: row.action,
+  target_table: row.target_table,
+  target_id: row.target_id,
+  metadata: row.metadata,
+  created_at: row.created_at,
+}));
+
+const globalLinks: GlobalLinkRow[] = ((linksData ?? []) as GlobalLinkQueryRow[]).map((row) => ({
+  id: row.id,
+  title: row.title,
+  short_code: row.short_code,
+  destination_url: row.destination_url,
+  created_at: row.created_at,
+  deleted_at: row.deleted_at,
+  is_pinned: row.is_pinned,
+  clicks: row.analytics?.[0]?.count ?? 0,
+  owner_email: row.profiles?.[0]?.email ?? 'N/A',
+  expires_at: row.expires_at,
+  max_clicks: row.max_clicks,
+  click_count: row.click_count,
+  has_password: row.password_hash !== null,
+  show_interstitial: row.show_interstitial,
+  webhook_url: row.webhook_url,
+  ga_tracking_id: row.ga_tracking_id,
+}));
+
+const totalPages = Math.max(1, Math.ceil((count ?? 0) / (to - from + 1)));
+
+const VALID_TABS = ['users', 'links', 'analytics', 'alerts', 'security', 'audit'];
+const requestedTab = Astro.url.searchParams.get('tab');
+const defaultTab = VALID_TABS.includes(requestedTab ?? '') ? requestedTab! : 'users';
+
+const dateFrom = Astro.url.searchParams.get('from') ?? '';
+const dateTo = Astro.url.searchParams.get('to') ?? '';
+const fromIso = dateFrom ? new Date(dateFrom).toISOString() : null;
+const toIso = dateTo ? new Date(`${dateTo}T23:59:59.999Z`).toISOString() : null;
+
+const companyStats = await fetchCompanyAnalytics(Astro.locals.supabase, fromIso, toIso);
+---
+
+<DashboardLayout title="Superadmin">
+  <SuperadminTabs
+    client:load
+    users={users}
+    departments={departments}
+    globalLinks={globalLinks}
+    auditLog={auditLog}
+    allowedDomains={allowedDomains}
+    blockedPatterns={blockedPatterns}
+    alertRules={alertRules}
+    companyStats={companyStats}
+    dateRange={{ from: dateFrom, to: dateTo }}
+    currentUserId={Astro.locals.user!.id}
+    defaultTab={defaultTab}
+    linksPage={page}
+    linksTotalPages={totalPages}
+  />
+</DashboardLayout>

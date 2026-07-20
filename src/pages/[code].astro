@@ -1,0 +1,224 @@
+---
+import { createClient } from '@supabase/supabase-js';
+import { env } from 'cloudflare:workers';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { LockKeyIcon, Link04Icon } from '@hugeicons/core-free-icons';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { siteConfig } from '@/lib/config';
+import { parseUserAgent } from '@/lib/ua-parser';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+interface RedirectResult {
+  id: string | null;
+  destination_url: string | null;
+  status: string;
+  show_interstitial: boolean | null;
+  webhook_url: string | null;
+  ga_tracking_id: string | null;
+}
+
+const { code } = Astro.params;
+
+const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+  auth: { persistSession: false },
+});
+
+const cf = Astro.request.cf;
+const { device, os, browser } = parseUserAgent(Astro.request.headers.get('user-agent') ?? '');
+const utmSource = Astro.url.searchParams.get('utm_source');
+// Set by src/lib/qr.ts on every URL this app encodes into a QR code —
+// distinguishes a QR scan from someone clicking/pasting the plain link.
+const channel = Astro.url.searchParams.get('src') === 'qr' ? 'qr' : 'link';
+
+const clientIp = Astro.request.headers.get('cf-connecting-ip') ?? '';
+const today = new Date().toISOString().slice(0, 10);
+
+// cf-connecting-ip is only ever empty outside Cloudflare's real edge (local
+// dev/preview, tests) — same limitation already accepted for cf.country and
+// the visitor_hash above. Skip rather than lump all such traffic into one
+// shared bucket, which wouldn't reflect real per-IP abuse anyway.
+if (clientIp) {
+  const rateLimit = await checkRateLimit(
+    env.RATE_LIMIT_KV,
+    clientIp,
+    siteConfig.security.redirectRateLimit.limit,
+    siteConfig.security.redirectRateLimit.windowSeconds,
+  );
+  if (!rateLimit.allowed) {
+    return new Response('Too Many Requests', { status: 429 });
+  }
+}
+
+const referrerHeader = Astro.request.headers.get('referer');
+let referrerHost: string | null = null;
+if (referrerHeader) {
+  try {
+    referrerHost = new URL(referrerHeader).hostname;
+  } catch {
+    referrerHost = null;
+  }
+}
+
+// Hashing link_id + IP + day (never storing the IP itself) lets "unique
+// clicks" be counted as distinct hashes without a cookie or PII at rest.
+async function hashVisitor(linkId: string): Promise<string | null> {
+  if (!clientIp) return null;
+  const data = new TextEncoder().encode(`${linkId}|${clientIp}|${today}`);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+const recordScan = (linkId: string, destinationUrl: string, webhookUrl: string | null) => async () => {
+  try {
+    const { error: insertError } = await supabase.rpc('record_scan', {
+      p_link_id: linkId,
+      p_country: cf?.country ?? null,
+      p_city: cf?.city ?? null,
+      p_device: device,
+      p_os: os,
+      p_browser: browser,
+      p_utm_source: utmSource,
+      p_referrer: referrerHost,
+      p_visitor_hash: await hashVisitor(linkId),
+      p_channel: channel,
+    });
+    if (insertError) console.error('analytics insert failed', insertError);
+  } catch (err) {
+    console.error('analytics insert threw', err);
+  }
+
+  // Fire-and-forget: a slow or failing customer endpoint must never affect
+  // the redirect itself, which has already happened by the time this runs.
+  if (webhookUrl) {
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'link.scanned',
+          link_id: linkId,
+          short_code: code,
+          destination_url: destinationUrl,
+          channel,
+          country: cf?.country ?? null,
+          device,
+          scanned_at: new Date().toISOString(),
+        }),
+      });
+    } catch (err) {
+      console.error('scan webhook threw', err);
+    }
+  }
+};
+
+let result: RedirectResult | null = null;
+let passwordError = false;
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const password = formData.get('password')?.toString() ?? '';
+  try {
+    const { data, error } = await supabase
+      .rpc('verify_link_password', { p_short_code: code, p_password: password })
+      .single<RedirectResult>();
+    if (!error) result = data;
+  } catch (err) {
+    console.error('password verification threw for short code', code, err);
+  }
+  passwordError = result?.status === 'invalid_password';
+} else {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_link_for_redirect', { p_short_code: code })
+      .single<RedirectResult>();
+    if (!error) result = data;
+  } catch (err) {
+    console.error('lookup threw for short code', code, err);
+  }
+}
+
+if (!result || result.status === 'not_found') {
+  return Astro.rewrite('/404');
+}
+
+if (result.status === 'expired' || result.status === 'limit_reached') {
+  return Astro.rewrite('/link-expired');
+}
+
+if (result.status === 'ok' && result.id && result.destination_url) {
+  Astro.locals.cfContext.waitUntil(recordScan(result.id, result.destination_url, result.webhook_url)());
+
+  if (!result.show_interstitial) {
+    return Astro.redirect(result.destination_url, 302);
+  }
+}
+
+const needsPassword = result.status === 'password_required' || result.status === 'invalid_password';
+---
+
+<BaseLayout title={needsPassword ? 'Enlace protegido' : 'Vas a salir de este sitio'}>
+  {
+    !needsPassword && result.ga_tracking_id && (
+      <script is:inline src="/scripts/ga-init.js" data-ga-id={result.ga_tracking_id} />
+    )
+  }
+  <div class="bg-background relative min-h-screen overflow-hidden">
+    <div
+      class:list={[
+        'pointer-events-none absolute -top-24 -left-24 size-96 rounded-full opacity-30 blur-3xl',
+        needsPassword ? 'bg-accent-blue' : 'bg-accent-lilac',
+      ]}
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="bg-accent-pink pointer-events-none absolute -right-24 -bottom-24 size-96 rounded-full opacity-30 blur-3xl"
+      aria-hidden="true"
+    >
+    </div>
+    <div class="relative flex min-h-screen items-center justify-center p-4">
+      {
+        needsPassword ? (
+          <form
+            method="POST"
+            class="bg-card flex w-full max-w-sm flex-col items-center gap-4 rounded-2xl p-6 text-center shadow-[var(--shadow-card-lg)]"
+          >
+            <div class="bg-accent-blue text-accent-blue-foreground flex size-11 items-center justify-center rounded-2xl">
+              <HugeiconsIcon icon={LockKeyIcon} size={20} />
+            </div>
+            <h1 class="text-lg font-semibold">Este enlace está protegido</h1>
+            <p class="text-muted-foreground text-sm">Ingresa la contraseña para continuar.</p>
+            <input
+              type="password"
+              name="password"
+              required
+              autofocus
+              class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-lg border bg-transparent px-3 text-sm outline-none focus-visible:ring-3"
+            />
+            {passwordError && <p class="text-destructive text-sm">Contraseña incorrecta.</p>}
+            <button
+              type="submit"
+              class="bg-primary text-primary-foreground hover:bg-primary/80 h-9 w-full rounded-lg px-3 text-sm font-medium"
+            >
+              Continuar
+            </button>
+          </form>
+        ) : (
+          <div class="bg-card flex w-full max-w-sm flex-col items-center gap-4 rounded-2xl p-6 text-center shadow-[var(--shadow-card-lg)]">
+            <div class="bg-accent-lilac text-accent-lilac-foreground flex size-11 items-center justify-center rounded-2xl">
+              <HugeiconsIcon icon={Link04Icon} size={20} />
+            </div>
+            <h1 class="text-lg font-semibold">Vas a salir de {siteConfig.name}</h1>
+            <p class="text-muted-foreground text-sm break-all">{result.destination_url}</p>
+            <a
+              href={result.destination_url ?? '#'}
+              class="bg-primary text-primary-foreground hover:bg-primary/80 h-9 w-full rounded-lg px-3 py-2 text-sm font-medium"
+            >
+              Continuar
+            </a>
+          </div>
+        )
+      }
+    </div>
+  </div>
+</BaseLayout>

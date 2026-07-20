@@ -1,0 +1,82 @@
+---
+import { env } from 'cloudflare:workers';
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { LinksDataTable } from '@/components/links/LinksDataTable';
+import LinksFilterBar from '@/components/links/LinksFilterBar.astro';
+import LinksStatusTabs from '@/components/links/LinksStatusTabs.astro';
+import { Pagination } from '@/components/ui/pagination';
+import { getPageFromSearchParams, getRange } from '@/lib/pagination';
+import type { LinkQueryRow, LinkRow } from '@/lib/types';
+
+const status = Astro.url.searchParams.get('status') === 'archived' ? 'archived' : 'active';
+const q = Astro.url.searchParams.get('q')?.trim() ?? '';
+const sort = Astro.url.searchParams.get('sort') === 'title' ? 'title' : 'created_at';
+const dir = Astro.url.searchParams.get('dir') === 'asc' ? 'asc' : 'desc';
+
+const page = getPageFromSearchParams(Astro.url.searchParams);
+const [from, to] = getRange(page);
+
+let query = Astro.locals.supabase
+  .from('links')
+  .select(
+    'id, title, short_code, destination_url, created_at, deleted_at, is_pinned, expires_at, max_clicks, click_count, password_hash, show_interstitial, webhook_url, ga_tracking_id, analytics(count), link_tags(tags(id, name))',
+    { count: 'exact' },
+  );
+
+query = status === 'archived' ? query.not('deleted_at', 'is', null) : query.is('deleted_at', null);
+
+if (q) {
+  const escapedQ = q.replace(/[,()]/g, '');
+  query = query.or(`title.ilike.*${escapedQ}*,destination_url.ilike.*${escapedQ}*`);
+}
+
+const { data, error, count } = await query
+  .order('is_pinned', { ascending: false })
+  .order(sort, { ascending: dir === 'asc' })
+  .range(from, to);
+
+if (error) console.error('failed to load links', error);
+
+const links: LinkRow[] = ((data ?? []) as LinkQueryRow[]).map((row) => ({
+  id: row.id,
+  title: row.title,
+  short_code: row.short_code,
+  destination_url: row.destination_url,
+  created_at: row.created_at,
+  deleted_at: row.deleted_at,
+  is_pinned: row.is_pinned,
+  clicks: row.analytics?.[0]?.count ?? 0,
+  tags: (row.link_tags ?? []).flatMap((lt) => lt.tags),
+  expires_at: row.expires_at,
+  max_clicks: row.max_clicks,
+  click_count: row.click_count,
+  has_password: row.password_hash !== null,
+  show_interstitial: row.show_interstitial,
+  webhook_url: row.webhook_url,
+  ga_tracking_id: row.ga_tracking_id,
+}));
+
+const totalPages = Math.max(1, Math.ceil((count ?? 0) / (to - from + 1)));
+
+const buildHref = (p: number) => {
+  const params = new URLSearchParams({ status, page: String(p) });
+  if (q) params.set('q', q);
+  if (sort !== 'created_at') params.set('sort', sort);
+  if (dir !== 'desc') params.set('dir', dir);
+  return `?${params.toString()}`;
+};
+---
+
+<DashboardLayout title="Mis links">
+  <div class="flex flex-col gap-4">
+    <div
+      class="bg-card border-border/60 flex flex-col gap-3 rounded-2xl border p-2.5 shadow-[var(--shadow-card)] md:flex-row md:items-center"
+    >
+      <LinksStatusTabs status={status} />
+      <div class="bg-border hidden h-6 w-px shrink-0 md:block"></div>
+      <LinksFilterBar q={q} sort={sort} dir={dir} status={status} />
+    </div>
+    <LinksDataTable client:load initialLinks={links} siteUrl={env.PUBLIC_SITE_URL} isArchived={status === 'archived'} />
+    <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />
+  </div>
+</DashboardLayout>

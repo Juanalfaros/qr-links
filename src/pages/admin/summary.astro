@@ -1,0 +1,208 @@
+---
+import { HourglassIcon, DashboardSpeed01Icon } from '@hugeicons/core-free-icons';
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { DonutChart } from '@/components/summary/DonutChart';
+import { AttentionCards, type AttentionItem } from '@/components/summary/AttentionCards';
+import { RecentScansFeed, type ScanItem } from '@/components/summary/RecentScansFeed';
+import { SummaryStatsRow } from '@/components/summary/SummaryStatsRow';
+import { SummaryLinksTable, type SummaryLinkItem } from '@/components/summary/SummaryLinksTable';
+import { fetchCompanyAnalytics } from '@/lib/analytics';
+
+const userId = Astro.locals.user!.id;
+
+const range = ['week', 'month', 'all'].includes(Astro.url.searchParams.get('range') ?? '')
+  ? (Astro.url.searchParams.get('range') as 'week' | 'month' | 'all')
+  : 'week';
+
+const now = new Date();
+const fromIso = (() => {
+  if (range === 'week') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 7);
+    return d.toISOString();
+  }
+  if (range === 'month') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 30);
+    return d.toISOString();
+  }
+  return null;
+})();
+
+const in7Days = new Date(now);
+in7Days.setDate(in7Days.getDate() + 7);
+
+// fetchCompanyAnalytics has no link_id filter and relies entirely on RLS
+// (analytics_select_own_or_superadmin) — for a regular user that naturally
+// scopes every number here to just their own links.
+const stats = await fetchCompanyAnalytics(Astro.locals.supabase, fromIso, null);
+
+const [
+  { count: activeLinks },
+  { data: expiringSoon },
+  { data: withClickLimit },
+  { data: scansData },
+  { data: recentLinksData },
+] = await Promise.all([
+  Astro.locals.supabase
+    .from('links')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('deleted_at', null),
+  Astro.locals.supabase
+    .from('links')
+    .select('id, title, expires_at')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .not('expires_at', 'is', null)
+    .gt('expires_at', now.toISOString())
+    .lte('expires_at', in7Days.toISOString())
+    .order('expires_at', { ascending: true })
+    .limit(3),
+  Astro.locals.supabase
+    .from('links')
+    .select('id, title, click_count, max_clicks')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .not('max_clicks', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(20),
+  Astro.locals.supabase
+    .from('analytics')
+    .select('id, scanned_at, device, country, channel, links(title)')
+    .order('scanned_at', { ascending: false })
+    .limit(3),
+  Astro.locals.supabase
+    .from('links')
+    .select('id, title, short_code, click_count, expires_at, max_clicks, password_hash, created_at')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(12),
+]);
+
+function daysUntil(iso: string): number {
+  return Math.max(1, Math.ceil((new Date(iso).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+}
+
+const nearLimit = (withClickLimit ?? []).filter((l) => l.click_count >= l.max_clicks! * 0.8);
+
+const attentionItems: AttentionItem[] = [
+  ...(expiringSoon ?? []).map((l) => ({
+    id: l.id,
+    title: l.title,
+    reason: `Vence en ${daysUntil(l.expires_at!)} día(s)`,
+    icon: HourglassIcon,
+    tone: 'yellow' as const,
+  })),
+  ...nearLimit.map((l) => ({
+    id: l.id,
+    title: l.title,
+    reason: `${l.click_count}/${l.max_clicks} clics usados`,
+    icon: DashboardSpeed01Icon,
+    tone: 'pink' as const,
+  })),
+].slice(0, 2);
+
+interface ScanQueryRow {
+  id: string;
+  scanned_at: string;
+  device: string | null;
+  country: string | null;
+  channel: string;
+  links: { title: string } | null;
+}
+
+const scans: ScanItem[] = ((scansData ?? []) as unknown as ScanQueryRow[]).map((s) => ({
+  id: s.id,
+  linkTitle: s.links?.title ?? 'Link eliminado',
+  device: s.device,
+  country: s.country,
+  channel: s.channel,
+  scannedAt: s.scanned_at,
+}));
+
+const summaryLinks: SummaryLinkItem[] = (recentLinksData ?? []).map((l) => {
+  const isExpiring = l.expires_at ? new Date(l.expires_at) <= in7Days && new Date(l.expires_at) > now : false;
+  const isNearLimit = l.max_clicks !== null && l.click_count >= l.max_clicks * 0.8;
+  const status: SummaryLinkItem['status'] =
+    isExpiring || isNearLimit ? 'expiring' : l.password_hash !== null ? 'protected' : 'active';
+  return {
+    id: l.id,
+    title: l.title,
+    short_code: l.short_code,
+    clicks: l.click_count,
+    status,
+    created_at: l.created_at,
+  };
+});
+
+const deviceSegments = stats.byDevice.map((d) => ({ label: d.label, value: d.clicks }));
+
+// Literal class names (not string-interpolated) so Tailwind's scanner can
+// actually discover them — matches the DonutChart's own segment palette.
+const LEGEND_DOT_CLASSES = ['bg-chart-1', 'bg-chart-2', 'bg-chart-3', 'bg-chart-4', 'bg-chart-5'];
+
+const RANGE_TABS = [
+  { value: 'week', label: '7 días' },
+  { value: 'month', label: '30 días' },
+  { value: 'all', label: 'Todo' },
+] as const;
+---
+
+<DashboardLayout title="Resumen">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div class="lg:col-span-1">
+        <div
+          class="bg-card border-border/60 flex h-full flex-col items-center gap-4 rounded-2xl border p-5 shadow-[var(--shadow-card)]"
+        >
+          <div class="bg-muted inline-flex w-fit shrink-0 items-center gap-1 self-start rounded-lg p-[3px]">
+            {
+              RANGE_TABS.map((t) => (
+                <a
+                  href={`?range=${t.value}`}
+                  class:list={[
+                    'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                    range === t.value
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  ]}
+                >
+                  {t.label}
+                </a>
+              ))
+            }
+          </div>
+          <DonutChart
+            client:load
+            segments={deviceSegments}
+            centerValue={stats.total.toLocaleString()}
+            centerLabel="Total de clics"
+          />
+          <div class="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            {
+              stats.byDevice.map((d, i) => (
+                <div class="flex items-center gap-1.5 text-xs">
+                  <span class:list={['size-2 rounded-full', LEGEND_DOT_CLASSES[i % LEGEND_DOT_CLASSES.length]]} />
+                  <span class="text-muted-foreground">{d.label}</span>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+      <div class="flex flex-col gap-4 lg:col-span-2">
+        <div>
+          <h2 class="mb-2 text-sm font-medium">Necesita tu atención</h2>
+          <AttentionCards client:load items={attentionItems} />
+        </div>
+        <RecentScansFeed client:visible scans={scans} />
+      </div>
+    </div>
+
+    <SummaryStatsRow totalClicks={stats.total} uniqueClicks={stats.unique} activeLinks={activeLinks ?? 0} />
+
+    <SummaryLinksTable client:load links={summaryLinks} />
+  </div>
+</DashboardLayout>

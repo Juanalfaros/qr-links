@@ -1,0 +1,101 @@
+---
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Download04Icon } from '@hugeicons/core-free-icons';
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+
+interface LinkOption {
+  id: string;
+  title: string;
+  short_code: string;
+}
+
+// Cap matches src/pages/api/qr/*.ts — keeps a single synchronous Worker
+// request from generating an unbounded number of QR codes.
+const MAX_BATCH = 100;
+
+const ids = Astro.url.searchParams.getAll('ids').filter(Boolean);
+
+const { data: allLinks } = await Astro.locals.supabase
+  .from('links')
+  .select('id, title, short_code')
+  .is('deleted_at', null)
+  .order('created_at', { ascending: false });
+
+const options = (allLinks ?? []) as LinkOption[];
+
+let selected: LinkOption[] = [];
+if (ids.length > 0) {
+  const { data } = await Astro.locals.supabase
+    .from('links')
+    .select('id, title, short_code')
+    .in('id', ids.slice(0, MAX_BATCH));
+  selected = (data ?? []) as LinkOption[];
+}
+
+const idsQuery = selected.map((l) => `ids=${encodeURIComponent(l.id)}`).join('&');
+---
+
+<DashboardLayout title="Exportar QR en lote">
+  <div class="flex flex-col gap-6">
+    {
+      selected.length === 0 ? (
+        <form method="GET" class="flex flex-col gap-4">
+          <p class="text-muted-foreground text-sm">
+            Selecciona hasta {MAX_BATCH} links para exportar sus códigos QR en lote.
+          </p>
+          <div class="bg-card border-border/60 flex flex-col gap-2 rounded-2xl border p-4 shadow-[var(--shadow-card)]">
+            {options.length === 0 ? (
+              <p class="text-muted-foreground text-sm">No tienes links todavía.</p>
+            ) : (
+              options.map((opt) => (
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="ids" value={opt.id} />
+                  <span>{opt.title}</span>
+                  <span class="text-muted-foreground font-mono text-xs">/{opt.short_code}</span>
+                </label>
+              ))
+            )}
+          </div>
+          <button
+            type="submit"
+            class="bg-primary text-primary-foreground hover:bg-primary/80 h-9 w-fit rounded-lg px-4 text-sm font-medium"
+          >
+            Continuar
+          </button>
+        </form>
+      ) : (
+        <>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-muted-foreground text-sm">{selected.length} link(s) seleccionados.</p>
+            <a href="/admin/qr-bulk-export" class="text-muted-foreground text-sm underline underline-offset-2">
+              Elegir otros links
+            </a>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <a
+              href={`/api/qr/bulk-export.zip?${idsQuery}`}
+              class="bg-accent-blue text-accent-blue-foreground hover:bg-accent-blue/80 flex h-9 items-center gap-1.5 rounded-lg px-4 text-sm font-medium"
+            >
+              <HugeiconsIcon icon={Download04Icon} size={15} />
+              Descargar ZIP (SVG)
+            </a>
+            <a
+              href={`/api/qr/bulk-export.pdf?${idsQuery}`}
+              class="bg-accent-pink text-accent-pink-foreground hover:bg-accent-pink/80 flex h-9 items-center gap-1.5 rounded-lg px-4 text-sm font-medium"
+            >
+              <HugeiconsIcon icon={Download04Icon} size={15} />
+              Descargar PDF
+            </a>
+          </div>
+          <ul class="bg-card border-border/60 flex flex-col gap-1 rounded-2xl border p-4 text-sm shadow-[var(--shadow-card)]">
+            {selected.map((link) => (
+              <li>
+                {link.title} <span class="text-muted-foreground font-mono text-xs">/{link.short_code}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+  </div>
+</DashboardLayout>

@@ -1,0 +1,42 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="Documentación de la API">
+  <div class="prose prose-sm dark:prose-invert flex max-w-2xl flex-col gap-6">
+    <section class="flex flex-col gap-2">
+      <h2 class="text-base font-semibold">Autenticación</h2>
+      <p class="text-muted-foreground text-sm">
+        Generá un token en <a href="/admin/api-tokens" class="underline underline-offset-2">Tokens de API</a> y enviálo en
+        cada request como header:
+      </p>
+      <pre class="bg-muted overflow-x-auto rounded-md p-3 text-xs"><code>Authorization: Bearer qrgyg_...</code></pre>
+    </section>
+
+    <section class="flex flex-col gap-2">
+      <h2 class="text-base font-semibold">Listar tus links</h2>
+      <pre
+        class="bg-muted overflow-x-auto rounded-md p-3 text-xs"><code>GET /api/public/links?limit=20
+
+curl -H "Authorization: Bearer qrgyg_..." \
+  "https://tu-dominio/api/public/links"</code></pre>
+    </section>
+
+    <section class="flex flex-col gap-2">
+      <h2 class="text-base font-semibold">Crear un link</h2>
+      <pre
+        class="bg-muted overflow-x-auto rounded-md p-3 text-xs"><code>POST /api/public/links
+Content-Type: application/json
+
+&#123; "title": "Mi link", "destination_url": "https://ejemplo.com" &#125;
+
+curl -X POST -H "Authorization: Bearer qrgyg_..." \
+  -H "Content-Type: application/json" \
+  -d '&#123;"title":"Mi link","destination_url":"https://ejemplo.com"&#125;' \
+  "https://tu-dominio/api/public/links"</code></pre>
+      <p class="text-muted-foreground text-xs">
+        Sujeto al mismo límite diario de creación de links por usuario que la app web.
+      </p>
+    </section>
+  </div>
+</DashboardLayout>

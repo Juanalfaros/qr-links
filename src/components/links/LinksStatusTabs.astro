@@ -1,0 +1,30 @@
+---
+interface Props {
+  status: string;
+}
+
+const { status } = Astro.props;
+
+const tabs = [
+  { value: 'active', label: 'Activos' },
+  { value: 'archived', label: 'Archivados' },
+];
+---
+
+<div class="bg-muted inline-flex w-fit shrink-0 items-center gap-1 rounded-lg p-[3px]">
+  {
+    tabs.map((tab) => (
+      <a
+        href={`?status=${tab.value}`}
+        class:list={[
+          'rounded-md px-3 py-1 text-sm font-medium transition-colors',
+          status === tab.value
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground',
+        ]}
+      >
+        {tab.label}
+      </a>
+    ))
+  }
+</div>

@@ -1,0 +1,110 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { ClicksOverTime } from '@/components/analytics/ClicksOverTime';
+import DateRangeFilter from '@/components/analytics/DateRangeFilter.astro';
+import { fetchLinkAnalytics } from '@/lib/analytics';
+
+interface LinkOption {
+  id: string;
+  title: string;
+  short_code: string;
+}
+
+const ids = Astro.url.searchParams.getAll('ids').filter(Boolean);
+const from = Astro.url.searchParams.get('from') ?? '';
+const to = Astro.url.searchParams.get('to') ?? '';
+const fromIso = from ? new Date(from).toISOString() : null;
+const toIso = to ? new Date(`${to}T23:59:59.999Z`).toISOString() : null;
+
+const { data: allLinks } = await Astro.locals.supabase
+  .from('links')
+  .select('id, title, short_code')
+  .is('deleted_at', null)
+  .order('created_at', { ascending: false });
+
+const options = (allLinks ?? []) as LinkOption[];
+
+let rows: { link: LinkOption; total: number; unique: number; days: { day: string; clicks: number }[] }[] = [];
+
+if (ids.length > 0) {
+  // RLS scopes this to the caller's own links (or any link, for a superadmin) —
+  // ids the caller doesn't own just don't come back, same 404-by-omission
+  // pattern used everywhere else in this app.
+  const { data: selected } = await Astro.locals.supabase.from('links').select('id, title, short_code').in('id', ids);
+
+  rows = await Promise.all(
+    ((selected ?? []) as LinkOption[]).map(async (link) => {
+      const stats = await fetchLinkAnalytics(Astro.locals.supabase, link.id, fromIso, toIso);
+      return { link, total: stats.total, unique: stats.unique, days: stats.days };
+    }),
+  );
+}
+
+const hiddenIdParams = ids.map((value) => ({ name: 'ids', value }));
+---
+
+<DashboardLayout title="Comparar links">
+  <div class="flex flex-col gap-6">
+    {
+      rows.length === 0 ? (
+        <form method="GET" class="flex flex-col gap-4">
+          <p class="text-muted-foreground text-sm">Selecciona 2 o más links para comparar sus clics.</p>
+          <div class="bg-card border-border/60 flex flex-col gap-2 rounded-2xl border p-4 shadow-[var(--shadow-card)]">
+            {options.length === 0 ? (
+              <p class="text-muted-foreground text-sm">No tienes links todavía.</p>
+            ) : (
+              options.map((opt) => (
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="ids" value={opt.id} />
+                  <span>{opt.title}</span>
+                  <span class="text-muted-foreground font-mono text-xs">/{opt.short_code}</span>
+                </label>
+              ))
+            )}
+          </div>
+          <button
+            type="submit"
+            class="bg-primary text-primary-foreground hover:bg-primary/80 h-9 w-fit rounded-lg px-4 text-sm font-medium"
+          >
+            Comparar
+          </button>
+        </form>
+      ) : (
+        <>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <DateRangeFilter from={from} to={to} hiddenParams={hiddenIdParams} />
+            <a href="/admin/analytics/compare" class="text-muted-foreground text-sm underline underline-offset-2">
+              Elegir otros links
+            </a>
+          </div>
+          <ClicksOverTime client:visible series={rows.map((r) => ({ label: r.link.title, days: r.days }))} />
+          <div class="bg-card border-border/60 overflow-x-auto rounded-2xl border shadow-[var(--shadow-card)]">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-border border-b text-left">
+                  <th class="p-3">Link</th>
+                  <th class="p-3">Clics totales</th>
+                  <th class="p-3">Clics únicos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr class="border-border border-b last:border-0">
+                    <td class="p-3">
+                      <a href={`/admin/analytics/${r.link.id}`} class="hover:underline">
+                        {r.link.title}
+                      </a>
+                      <span class="text-muted-foreground ml-1 font-mono text-xs">/{r.link.short_code}</span>
+                    </td>
+                    <td class="p-3">{r.total}</td>
+                    <td class="p-3">{r.unique}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )
+    }
+  </div>
+</DashboardLayout>

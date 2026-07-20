@@ -1,0 +1,120 @@
+---
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  Cancel01Icon,
+  Chart01Icon,
+  DashboardSquare01Icon,
+  Link04Icon,
+  QrCode01Icon,
+  ShieldUserIcon,
+  UserIcon,
+  Key01Icon,
+} from '@hugeicons/core-free-icons';
+import { siteConfig } from '@/lib/config';
+import type { UserRole } from '@/lib/types';
+
+interface Props {
+  currentPath: string;
+  role: UserRole;
+}
+
+const { currentPath, role } = Astro.props;
+
+const navSections = [
+  {
+    label: 'General',
+    items: [
+      { href: '/admin/summary', label: 'Resumen', icon: DashboardSquare01Icon },
+      { href: '/admin/dashboard', label: 'Mis links', icon: Link04Icon },
+      { href: '/admin/analytics/compare', label: 'Comparar links', icon: Chart01Icon },
+      { href: '/admin/qr-bulk-export', label: 'Exportar QR en lote', icon: QrCode01Icon },
+    ],
+  },
+  {
+    label: 'Cuenta',
+    items: [
+      { href: '/admin/profile', label: 'Mi perfil', icon: UserIcon },
+      { href: '/admin/api-tokens', label: 'Tokens de API', icon: Key01Icon },
+      ...(role === 'superadmin' ? [{ href: '/superadmin/dashboard', label: 'Superadmin', icon: ShieldUserIcon }] : []),
+    ],
+  },
+];
+---
+
+<nav
+  id="sidebar"
+  class="bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col gap-1 overflow-y-auto p-4 transition-transform duration-200 md:static md:z-auto md:my-3 md:ml-3 md:w-60 md:shrink-0 md:translate-x-0 md:rounded-3xl"
+>
+  <div class="mb-5 flex items-start justify-between px-2 pt-1">
+    <div class="flex flex-col items-start gap-2">
+      {
+        /* White chip regardless of theme — the sidebar is always dark, and the
+          logo's own fixed colors aren't guaranteed to read on a dark fill. */
+      }
+      <span class="flex size-10 items-center justify-center rounded-xl bg-white p-1.5">
+        <img src={siteConfig.logoUrl} alt="" class="size-full object-contain" />
+      </span>
+      <span class="font-heading text-sidebar-foreground text-lg font-semibold tracking-tight">{siteConfig.name}</span>
+    </div>
+    <button
+      id="sidebar-close"
+      type="button"
+      class="text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground rounded-lg p-1 md:hidden"
+      aria-label="Cerrar menú"
+    >
+      <HugeiconsIcon icon={Cancel01Icon} size={18} />
+    </button>
+  </div>
+  {
+    navSections.map((section) => (
+      <div class="mb-2 flex flex-col gap-1">
+        <span class="text-sidebar-foreground/45 px-3 pt-2 pb-1 text-[11px] font-medium tracking-wider uppercase">
+          {section.label}
+        </span>
+        {section.items.map((item) => {
+          const isActive = currentPath.startsWith(item.href);
+          return (
+            <a
+              href={item.href}
+              class:list={[
+                'group relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-sidebar-accent text-sidebar-foreground'
+                  : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+              ]}
+            >
+              {isActive && (
+                <span class="bg-sidebar-primary absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-full" />
+              )}
+              <HugeiconsIcon icon={item.icon} size={18} />
+              {item.label}
+            </a>
+          );
+        })}
+      </div>
+    ))
+  }
+</nav>
+<div id="sidebar-backdrop" class="fixed inset-0 z-40 hidden bg-black/40 md:hidden" aria-hidden="true"></div>
+
+<script>
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const closeBtn = document.getElementById('sidebar-close');
+
+  const close = () => {
+    sidebar?.classList.add('-translate-x-full');
+    backdrop?.classList.add('hidden');
+  };
+  const open = () => {
+    sidebar?.classList.remove('-translate-x-full');
+    backdrop?.classList.remove('hidden');
+  };
+
+  document.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('#sidebar-toggle')) open();
+  });
+  backdrop?.addEventListener('click', close);
+  closeBtn?.addEventListener('click', close);
+</script>

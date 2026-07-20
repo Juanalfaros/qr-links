@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "qr-gyg",
+  // Custom entrypoint (not the adapter's default) so it can also export a
+  // `scheduled` handler for Cron Triggers — see src/worker-entry.ts.
+  "main": "src/worker-entry.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "PUBLIC_SITE_URL": "https://links.tuempresa.com",
+    // Cloudflare's official test key (always passes, works on any domain
+    // including localhost — see developers.cloudflare.com/turnstile/troubleshooting/testing).
+    // Replace with a real site key before deploying, and enter the matching
+    // secret key in Supabase's Auth settings ("Enable Captcha protection") —
+    // that toggle is what actually turns on enforcement server-side.
+    "PUBLIC_TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
+    // Must be on a domain verified in Resend (free tier: 1 domain, 3000
+    // emails/month). RESEND_API_KEY is a secret — set via .dev.vars locally
+    // or `wrangler secret put RESEND_API_KEY` for real deploys.
+    "RESEND_FROM_EMAIL": "digest@tuempresa.com",
+  },
+  // Secrets reales (nunca aqui): SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY
+  // Configurar via `wrangler secret put <NAME>` o el dashboard de Cloudflare Workers.
+  // Para desarrollo local, usar un archivo .dev.vars (gitignored).
+  "triggers": {
+    // Both free on Cloudflare's plan (5 cron triggers per account). Must
+    // match the cron strings checked in src/worker-entry.ts exactly.
+    "crons": [
+      "0 * * * *", // hourly: alert_rules check
+      "0 8 * * 1", // weekly, Monday 08:00 UTC: company-wide digest email
+    ],
+  },
+  "kv_namespaces": [
+    // Rate limiting del redirect público (src/lib/rate-limit.ts). El "id" de
+    // abajo es un placeholder: antes de desplegar, crea el namespace real con
+    // `wrangler kv namespace create RATE_LIMIT_KV` y reemplázalo (gratis:
+    // 100k lecturas/1k escrituras por día en el plan free de Cloudflare).
+    { "binding": "RATE_LIMIT_KV", "id": "placeholder-run-wrangler-kv-namespace-create" },
+  ],
+}
