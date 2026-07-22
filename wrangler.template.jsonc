@@ -1,6 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "qr-link",
+  // Must match the Cloudflare Workers Builds "Project name" for the
+  // connected repo (Workers Builds overrides/warns otherwise and may open a
+  // PR to "fix" a mismatch) — not necessarily the same as package.json's name.
+  "name": "qr-links",
   // Custom entrypoint (not the adapter's default) so it can also export a
   // `scheduled` handler for Cron Triggers — see src/worker-entry.ts.
   "main": "src/worker-entry.ts",
