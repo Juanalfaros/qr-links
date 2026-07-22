@@ -1,0 +1,36 @@
+---
+import { env } from 'cloudflare:workers';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { SetupForm } from '@/components/auth/SetupForm';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
+
+// Reachability is entirely gated by src/middleware.ts (redirects away once
+// onboarding_needed() is false, or if a session already exists) — nothing
+// else to check here.
+---
+
+<BaseLayout title="Configuración inicial">
+  <div class="bg-background relative min-h-screen overflow-hidden">
+    <div
+      class="bg-accent-lilac pointer-events-none absolute -top-24 -left-24 size-96 rounded-full opacity-30 blur-3xl"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="bg-accent-green pointer-events-none absolute -right-24 -bottom-24 size-96 rounded-full opacity-30 blur-3xl"
+      aria-hidden="true"
+    >
+    </div>
+    <div class="absolute top-4 right-4">
+      <ThemeToggle client:load />
+    </div>
+    <div class="relative flex min-h-screen items-center justify-center p-4">
+      <SetupForm
+        client:load
+        supabaseUrl={env.SUPABASE_URL}
+        supabaseAnonKey={env.SUPABASE_ANON_KEY}
+        turnstileSiteKey={env.PUBLIC_TURNSTILE_SITE_KEY}
+      />
+    </div>
+  </div>
+</BaseLayout>

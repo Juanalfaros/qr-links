@@ -1,4 +1,4 @@
-# qr-gyg
+# qr-link
 
 Acortador de enlaces dinámico y generador de códigos QR corporativo, multiusuario, con roles de usuario y superadmin.
 
@@ -6,12 +6,15 @@ Acortador de enlaces dinámico y generador de códigos QR corporativo, multiusua
 
 ## Funcionalidad
 
-- Login/logout con sesión basada en cookies (Supabase Auth).
+- Onboarding inicial en `/setup`: crea la primera cuenta de superadmin y configura nombre/logo/favicon de la empresa (persistido en Supabase) sin tocar código ni variables de entorno.
+- Branding editable en cualquier momento desde el panel de superadmin (nombre, logo, favicon, prefijo de tokens de API) — el repo público no lleva ningún dato de marca hardcodeado.
+- Login/logout con sesión basada en cookies (Supabase Auth), recuperación de contraseña self-service (`/forgot-password` → `/reset-password`) y cambio de contraseña desde el perfil.
 - Cada usuario crea, edita, archiva y elimina sus propios links, con código corto autogenerado o personalizado.
 - Generación de QR en PNG y SVG, con descarga directa.
 - Redirect público (`/[code]`) que registra analíticas (país, ciudad, dispositivo, OS, browser, UTM) de forma asíncrona sin bloquear el redirect.
 - Analíticas por link: clics totales, desglose por país/dispositivo, clics en el tiempo.
-- Panel de superadmin: gestión de usuarios y roles, invitar nuevos usuarios, vista global de todos los links de la empresa, analíticas consolidadas de toda la empresa (mapa mundial, KPIs, desgloses), alertas configurables y digest semanal por email.
+- Panel de superadmin: gestión de usuarios y roles, invitar nuevos usuarios, vista global de todos los links de la empresa, analíticas consolidadas de toda la empresa (mapa mundial, KPIs, desgloses), alertas configurables, digest semanal por email, y una "zona de peligro" para borrar todo el contenido de la app (preservando cuentas y branding) con doble confirmación.
+- Tokens de API personales para integraciones externas, con prefijo configurable por instancia.
 - Dark/light mode con persistencia.
 - Layout responsivo (sidebar colapsa a drawer en móvil, tablas colapsan a cards).
 
@@ -60,10 +63,7 @@ Acortador de enlaces dinámico y generador de códigos QR corporativo, multiusua
    pnpm dev
    ```
 
-7. Crea tu primer superadmin: registra un usuario normalmente (o créalo desde **Authentication → Users → Add user** en el dashboard de Supabase), luego promuévelo desde el **SQL Editor**:
-   ```sql
-   update public.profiles set role = 'superadmin' where email = 'tu-correo@ejemplo.com';
-   ```
+7. Abre el sitio (`http://localhost:4321` en desarrollo, o tu dominio en producción). Como todavía no existe ningún superadmin, serás redirigido automáticamente a `/setup` — ahí creas la cuenta de administrador y configuras el nombre/logo/favicon de la empresa (se guardan en Supabase, no hace falta tocar código ni variables de entorno). Una vez completado, `/setup` deja de estar accesible.
 
 ## Comandos
 
@@ -114,3 +114,7 @@ src/
 supabase/
   migrations/       # Migraciones SQL en orden numérico
 ```
+
+## Changelog
+
+Ver [CHANGELOG.md](CHANGELOG.md) para el historial de cambios.

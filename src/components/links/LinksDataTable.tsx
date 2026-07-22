@@ -15,10 +15,11 @@ import type { LinkRow } from '@/lib/types';
 interface LinksDataTableProps {
   initialLinks: LinkRow[];
   siteUrl: string;
+  logoUrl: string | null;
   isArchived: boolean;
 }
 
-export function LinksDataTable({ initialLinks, siteUrl, isArchived }: LinksDataTableProps) {
+export function LinksDataTable({ initialLinks, siteUrl, logoUrl, isArchived }: LinksDataTableProps) {
   const [links, setLinks] = useState<LinkRow[]>(initialLinks);
 
   const handleUpdated = (updated: LinkRow) => {
@@ -93,6 +94,7 @@ export function LinksDataTable({ initialLinks, siteUrl, isArchived }: LinksDataT
       cell: ({ row }) => (
         <LinkRowActions
           siteUrl={siteUrl}
+          logoUrl={logoUrl}
           link={row.original}
           isArchived={isArchived}
           onUpdated={handleUpdated}
@@ -111,7 +113,11 @@ export function LinksDataTable({ initialLinks, siteUrl, isArchived }: LinksDataT
       {!isArchived && (
         <div className="flex justify-end gap-2">
           <BitlyImportDialog onImported={(imported) => setLinks((prev) => [...imported, ...prev])} />
-          <CreateLinkDialog siteUrl={siteUrl} onCreated={(link) => setLinks((prev) => [link, ...prev])} />
+          <CreateLinkDialog
+            siteUrl={siteUrl}
+            logoUrl={logoUrl}
+            onCreated={(link) => setLinks((prev) => [link, ...prev])}
+          />
         </div>
       )}
 
@@ -134,6 +140,7 @@ export function LinksDataTable({ initialLinks, siteUrl, isArchived }: LinksDataT
                 key={link.id}
                 link={link}
                 siteUrl={siteUrl}
+                logoUrl={logoUrl}
                 isArchived={isArchived}
                 onUpdated={handleUpdated}
                 onDeleted={handleRemoved}

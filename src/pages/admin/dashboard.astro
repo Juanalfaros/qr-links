@@ -6,6 +6,7 @@ import LinksFilterBar from '@/components/links/LinksFilterBar.astro';
 import LinksStatusTabs from '@/components/links/LinksStatusTabs.astro';
 import { Pagination } from '@/components/ui/pagination';
 import { getPageFromSearchParams, getRange } from '@/lib/pagination';
+import { getBranding } from '@/lib/branding';
 import type { LinkQueryRow, LinkRow } from '@/lib/types';
 
 const status = Astro.url.searchParams.get('status') === 'archived' ? 'archived' : 'active';
@@ -58,6 +59,8 @@ const links: LinkRow[] = ((data ?? []) as LinkQueryRow[]).map((row) => ({
 
 const totalPages = Math.max(1, Math.ceil((count ?? 0) / (to - from + 1)));
 
+const branding = await getBranding(Astro.locals.supabase);
+
 const buildHref = (p: number) => {
   const params = new URLSearchParams({ status, page: String(p) });
   if (q) params.set('q', q);
@@ -76,7 +79,13 @@ const buildHref = (p: number) => {
       <div class="bg-border hidden h-6 w-px shrink-0 md:block"></div>
       <LinksFilterBar q={q} sort={sort} dir={dir} status={status} />
     </div>
-    <LinksDataTable client:load initialLinks={links} siteUrl={env.PUBLIC_SITE_URL} isArchived={status === 'archived'} />
+    <LinksDataTable
+      client:load
+      initialLinks={links}
+      siteUrl={env.PUBLIC_SITE_URL}
+      logoUrl={branding.logoUrl}
+      isArchived={status === 'archived'}
+    />
     <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />
   </div>
 </DashboardLayout>

@@ -44,6 +44,21 @@ export const deleteByIdSchema = z.object({
   id: z.string().trim().min(1, 'id is required'),
 });
 
+export const updateBrandingSchema = z.object({
+  name: z.string().trim().min(1, 'name is required').max(120),
+  tokenPrefix: z
+    .string()
+    .trim()
+    .min(1, 'tokenPrefix is required')
+    .max(20, 'tokenPrefix must be at most 20 characters')
+    .regex(/^[a-z0-9_]+_$/, 'tokenPrefix must be lowercase letters/numbers/underscores and end with "_"'),
+});
+
+export const wipeDataSchema = z.object({
+  confirmationPhrase: z.string().trim().min(1, 'confirmationPhrase is required'),
+  password: z.string().min(1, 'password is required'),
+});
+
 export const createAlertRuleSchema = z.object({
   linkId: z.string().trim().min(1).nullable(),
   thresholdCount: z.number().int().positive(),

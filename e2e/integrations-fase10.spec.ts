@@ -16,7 +16,9 @@ test.describe('integrations (Fase 10)', () => {
 
     await expect(page.getByText('Token creado')).toBeVisible();
     const plaintext = (await page.locator('div.font-mono').innerText()).trim();
-    expect(plaintext).toMatch(/^qrgyg_[0-9a-f]+/);
+    // Prefix itself is a configurable, per-deployment setting
+    // (branding_settings.token_prefix) — assert the shape, not a specific value.
+    expect(plaintext).toMatch(/^[a-z0-9_]+_[0-9a-f]+$/);
     await page.click('button:has-text("Listo")');
     await expect(page.getByText(tokenName)).toBeVisible();
 

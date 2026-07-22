@@ -1,6 +1,6 @@
 -- Fase 5: destination URL validation. Google Safe Browsing was considered
 -- and rejected — beyond the unconfirmed GCP billing requirement, its terms
--- restrict it to non-commercial use, which qr-gyg (a corporate tool) isn't.
+-- restrict it to non-commercial use, which qr-link (a corporate tool) isn't.
 -- These two hand-maintained lists replace it at zero cost/dependency.
 create table public.allowed_domains (
   id uuid primary key default gen_random_uuid(),

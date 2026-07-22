@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { CommandPalette } from '@/components/layout/CommandPalette';
 import { Toaster } from '@/components/ui/sonner';
+import { getBranding } from '@/lib/branding';
 
 interface Props {
   title: string;
@@ -15,11 +16,15 @@ interface Props {
 
 const { title } = Astro.props;
 const user = Astro.locals.user!;
+// Single fetch point for the entire authenticated app surface (every
+// /admin/*, /superadmin/* page renders through this layout) — cheaper and
+// simpler than each page fetching branding on its own.
+const branding = await getBranding(Astro.locals.supabase);
 ---
 
-<BaseLayout title={title}>
+<BaseLayout title={title} siteName={branding.name} faviconUrl={branding.faviconUrl}>
   <div class="bg-background flex h-screen overflow-hidden">
-    <SidebarNav currentPath={Astro.url.pathname} role={user.role} />
+    <SidebarNav currentPath={Astro.url.pathname} role={user.role} name={branding.name} logoUrl={branding.logoUrl} />
     <div class="flex min-w-0 flex-1 flex-col">
       <header class="flex h-16 items-center justify-between gap-3 px-4 md:px-8">
         <div class="flex min-w-0 items-center gap-3">

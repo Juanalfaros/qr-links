@@ -3,6 +3,7 @@ import DashboardLayout from '@/layouts/DashboardLayout.astro';
 import { SuperadminTabs } from '@/components/admin/SuperadminTabs';
 import { getPageFromSearchParams, getRange } from '@/lib/pagination';
 import { fetchCompanyAnalytics } from '@/lib/analytics';
+import { getBranding } from '@/lib/branding';
 import type {
   AlertRuleRow,
   AuditLogQueryRow,
@@ -90,7 +91,7 @@ const globalLinks: GlobalLinkRow[] = ((linksData ?? []) as GlobalLinkQueryRow[])
 
 const totalPages = Math.max(1, Math.ceil((count ?? 0) / (to - from + 1)));
 
-const VALID_TABS = ['users', 'links', 'analytics', 'alerts', 'security', 'audit'];
+const VALID_TABS = ['users', 'links', 'analytics', 'alerts', 'security', 'branding', 'audit'];
 const requestedTab = Astro.url.searchParams.get('tab');
 const defaultTab = VALID_TABS.includes(requestedTab ?? '') ? requestedTab! : 'users';
 
@@ -100,6 +101,7 @@ const fromIso = dateFrom ? new Date(dateFrom).toISOString() : null;
 const toIso = dateTo ? new Date(`${dateTo}T23:59:59.999Z`).toISOString() : null;
 
 const companyStats = await fetchCompanyAnalytics(Astro.locals.supabase, fromIso, toIso);
+const branding = await getBranding(Astro.locals.supabase);
 ---
 
 <DashboardLayout title="Superadmin">
@@ -118,5 +120,6 @@ const companyStats = await fetchCompanyAnalytics(Astro.locals.supabase, fromIso,
     defaultTab={defaultTab}
     linksPage={page}
     linksTotalPages={totalPages}
+    branding={branding}
   />
 </DashboardLayout>

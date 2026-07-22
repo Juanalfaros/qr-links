@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Mail01Icon, ShieldKeyIcon, Key01Icon, Building01Icon } from '@hugeicons/core-free-icons';
+import { Mail01Icon, ShieldKeyIcon, Key01Icon, Building01Icon, LockKeyIcon } from '@hugeicons/core-free-icons';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { buttonVariants } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog';
 import { cn } from '@/lib/utils';
 import type { ProfileRow } from '@/lib/types';
 
@@ -10,9 +12,19 @@ interface AccountSecurityCardProps {
   profile: ProfileRow;
   departmentName: string | null;
   mfaEnabled: boolean;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
 }
 
-export function AccountSecurityCard({ profile, departmentName, mfaEnabled }: AccountSecurityCardProps) {
+export function AccountSecurityCard({
+  profile,
+  departmentName,
+  mfaEnabled,
+  supabaseUrl,
+  supabaseAnonKey,
+}: AccountSecurityCardProps) {
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+
   return (
     <Card>
       <CardHeader>
@@ -43,7 +55,18 @@ export function AccountSecurityCard({ profile, departmentName, mfaEnabled }: Acc
           <HugeiconsIcon icon={Key01Icon} size={16} />
           Tokens de API
         </a>
+        <Button variant="outline" size="sm" className="justify-start gap-2" onClick={() => setChangePasswordOpen(true)}>
+          <HugeiconsIcon icon={LockKeyIcon} size={16} />
+          Cambiar contraseña
+        </Button>
       </CardContent>
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onOpenChange={setChangePasswordOpen}
+        email={profile.email}
+        supabaseUrl={supabaseUrl}
+        supabaseAnonKey={supabaseAnonKey}
+      />
     </Card>
   );
 }

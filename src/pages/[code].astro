@@ -2,9 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { LockKeyIcon, Link04Icon } from '@hugeicons/core-free-icons';
+import { LockKeyIcon, Link04Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { siteConfig } from '@/lib/config';
+import { getBranding } from '@/lib/branding';
 import { parseUserAgent } from '@/lib/ua-parser';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -154,9 +155,16 @@ if (result.status === 'ok' && result.id && result.destination_url) {
 }
 
 const needsPassword = result.status === 'password_required' || result.status === 'invalid_password';
+// Only reached on the slower interstitial/password-gate render paths — the
+// hot direct-redirect path already returned above, before this ever runs.
+const branding = await getBranding(supabase);
 ---
 
-<BaseLayout title={needsPassword ? 'Enlace protegido' : 'Vas a salir de este sitio'}>
+<BaseLayout
+  title={needsPassword ? 'Enlace protegido' : 'Vas a salir de este sitio'}
+  siteName={branding.name}
+  faviconUrl={branding.faviconUrl}
+>
   {
     !needsPassword && result.ga_tracking_id && (
       <script is:inline src="/scripts/ga-init.js" data-ga-id={result.ga_tracking_id} />
@@ -188,13 +196,29 @@ const needsPassword = result.status === 'password_required' || result.status ===
             </div>
             <h1 class="text-lg font-semibold">Este enlace está protegido</h1>
             <p class="text-muted-foreground text-sm">Ingresa la contraseña para continuar.</p>
-            <input
-              type="password"
-              name="password"
-              required
-              autofocus
-              class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-lg border bg-transparent px-3 text-sm outline-none focus-visible:ring-3"
-            />
+            <div class="relative w-full">
+              <input
+                id="link-password"
+                type="password"
+                name="password"
+                required
+                autofocus
+                class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-lg border bg-transparent px-3 pr-9 text-sm outline-none focus-visible:ring-3"
+              />
+              <button
+                type="button"
+                id="toggle-link-password"
+                aria-label="Mostrar contraseña"
+                class="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
+              >
+                <span id="link-password-icon-show">
+                  <HugeiconsIcon icon={ViewIcon} size={16} />
+                </span>
+                <span id="link-password-icon-hide" class="hidden">
+                  <HugeiconsIcon icon={ViewOffIcon} size={16} />
+                </span>
+              </button>
+            </div>
             {passwordError && <p class="text-destructive text-sm">Contraseña incorrecta.</p>}
             <button
               type="submit"
@@ -208,7 +232,7 @@ const needsPassword = result.status === 'password_required' || result.status ===
             <div class="bg-accent-lilac text-accent-lilac-foreground flex size-11 items-center justify-center rounded-2xl">
               <HugeiconsIcon icon={Link04Icon} size={20} />
             </div>
-            <h1 class="text-lg font-semibold">Vas a salir de {siteConfig.name}</h1>
+            <h1 class="text-lg font-semibold">Vas a salir de {branding.name}</h1>
             <p class="text-muted-foreground text-sm break-all">{result.destination_url}</p>
             <a
               href={result.destination_url ?? '#'}
@@ -220,5 +244,20 @@ const needsPassword = result.status === 'password_required' || result.status ===
         )
       }
     </div>
+    <script is:inline>
+      const toggle = document.getElementById('toggle-link-password');
+      const input = document.getElementById('link-password');
+      const iconShow = document.getElementById('link-password-icon-show');
+      const iconHide = document.getElementById('link-password-icon-hide');
+      if (toggle && input && iconShow && iconHide) {
+        toggle.addEventListener('click', () => {
+          const showing = input.type === 'text';
+          input.type = showing ? 'password' : 'text';
+          iconShow.classList.toggle('hidden', !showing);
+          iconHide.classList.toggle('hidden', showing);
+          toggle.setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
+        });
+      }
+    </script>
   </div>
 </BaseLayout>

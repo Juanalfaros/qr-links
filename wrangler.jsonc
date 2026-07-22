@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "qr-gyg",
+  "name": "qr-link",
   // Custom entrypoint (not the adapter's default) so it can also export a
   // `scheduled` handler for Cron Triggers — see src/worker-entry.ts.
   "main": "src/worker-entry.ts",

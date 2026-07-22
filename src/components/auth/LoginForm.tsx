@@ -3,20 +3,29 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Mail01Icon, LockKeyIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { siteConfig } from '@/lib/config';
 
 interface LoginFormProps {
   supabaseUrl: string;
   supabaseAnonKey: string;
   redirectTo: string;
   turnstileSiteKey: string;
+  name: string;
+  logoUrl: string | null;
 }
 
-export function LoginForm({ supabaseUrl, supabaseAnonKey, redirectTo, turnstileSiteKey }: LoginFormProps) {
+export function LoginForm({
+  supabaseUrl,
+  supabaseAnonKey,
+  redirectTo,
+  turnstileSiteKey,
+  name,
+  logoUrl,
+}: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -54,14 +63,16 @@ export function LoginForm({ supabaseUrl, supabaseAnonKey, redirectTo, turnstileS
     <Card className="w-full max-w-sm shadow-[var(--shadow-card-lg)]">
       <CardHeader className="gap-3 pb-4">
         {/* White chip regardless of theme — the logo's own fixed colors
-            (navy/yellow) aren't guaranteed to read well on the card's
-            background in dark mode. */}
-        <div className="flex size-12 items-center justify-center rounded-2xl bg-white p-2 shadow-[var(--shadow-card)]">
-          <img src={siteConfig.logoUrl} alt="" className="size-full object-contain" />
-        </div>
+            aren't guaranteed to read well on the card's background in dark
+            mode. */}
+        {logoUrl && (
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-white p-2 shadow-[var(--shadow-card)]">
+            <img src={logoUrl} alt="" className="size-full object-contain" />
+          </div>
+        )}
         <div>
           <CardTitle className="font-heading text-xl">Iniciar sesión</CardTitle>
-          <CardDescription>{siteConfig.name}</CardDescription>
+          <CardDescription>{name}</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -86,16 +97,20 @@ export function LoginForm({ supabaseUrl, supabaseAnonKey, redirectTo, turnstileS
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Contraseña</Label>
+              <a href="/forgot-password" className="text-muted-foreground text-xs underline underline-offset-2">
+                ¿Olvidaste tu contraseña?
+              </a>
+            </div>
             <div className="relative">
               <HugeiconsIcon
                 icon={LockKeyIcon}
                 size={16}
                 className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
               />
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

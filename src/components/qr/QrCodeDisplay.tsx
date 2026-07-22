@@ -10,6 +10,7 @@ import { appendQrSourceParam } from '@/lib/qr';
 interface QrCodeDisplayProps {
   value: string;
   size?: number;
+  logoUrl: string | null;
 }
 
 // Print-friendly presets at ~300dpi, alongside the screen default.
@@ -28,7 +29,7 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function QrCodeDisplay({ value, size: initialSize = siteConfig.qr.defaultSize }: QrCodeDisplayProps) {
+export function QrCodeDisplay({ value, size: initialSize = siteConfig.qr.defaultSize, logoUrl }: QrCodeDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState(initialSize);
   const [darkColor, setDarkColor] = useState('#000000');
@@ -66,12 +67,12 @@ export function QrCodeDisplay({ value, size: initialSize = siteConfig.qr.default
       if (cancelled) return;
       ctx.drawImage(qrCanvas, framePadding, framePadding);
 
-      if (includeLogo) {
+      if (includeLogo && logoUrl) {
         const logo = new Image();
         await new Promise<void>((resolve) => {
           logo.onload = () => resolve();
           logo.onerror = () => resolve();
-          logo.src = siteConfig.logoUrl;
+          logo.src = logoUrl;
         });
         if (cancelled || logo.naturalWidth === 0) return;
         const logoSize = size * 0.22;
@@ -96,7 +97,7 @@ export function QrCodeDisplay({ value, size: initialSize = siteConfig.qr.default
     return () => {
       cancelled = true;
     };
-  }, [encodedValue, size, darkColor, lightColor, includeLogo, includeFrame, framePadding]);
+  }, [encodedValue, size, darkColor, lightColor, includeLogo, includeFrame, framePadding, logoUrl]);
 
   const handleDownloadPng = () => {
     const dataUrl = canvasRef.current?.toDataURL('image/png');
@@ -167,10 +168,12 @@ export function QrCodeDisplay({ value, size: initialSize = siteConfig.qr.default
               />
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={includeLogo} onChange={(e) => setIncludeLogo(e.target.checked)} />
-            Incluir logo de la empresa
-          </label>
+          {logoUrl && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={includeLogo} onChange={(e) => setIncludeLogo(e.target.checked)} />
+              Incluir logo de la empresa
+            </label>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={includeFrame} onChange={(e) => setIncludeFrame(e.target.checked)} />
             Marco &ldquo;Escanéame&rdquo;

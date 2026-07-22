@@ -8,6 +8,7 @@ import type { LinkRow } from '@/lib/types';
 interface LinkCardProps {
   link: LinkRow;
   siteUrl: string;
+  logoUrl: string | null;
   isArchived: boolean;
   onUpdated: (link: LinkRow) => void;
   onDeleted: (id: string) => void;
@@ -15,7 +16,16 @@ interface LinkCardProps {
   onRestored: (id: string) => void;
 }
 
-export function LinkCard({ link, siteUrl, isArchived, onUpdated, onDeleted, onDuplicated, onRestored }: LinkCardProps) {
+export function LinkCard({
+  link,
+  siteUrl,
+  logoUrl,
+  isArchived,
+  onUpdated,
+  onDeleted,
+  onDuplicated,
+  onRestored,
+}: LinkCardProps) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-3">
@@ -54,6 +64,7 @@ export function LinkCard({ link, siteUrl, isArchived, onUpdated, onDeleted, onDu
         <div>
           <LinkRowActions
             siteUrl={siteUrl}
+            logoUrl={logoUrl}
             link={link}
             isArchived={isArchived}
             onUpdated={onUpdated}

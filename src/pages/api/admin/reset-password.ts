@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Uses Supabase's own built-in recovery email (no Resend/custom mailer
   // needed) — same free-tier constraint as the rest of this project.
   const { error } = await locals.supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${env.PUBLIC_SITE_URL}/login`,
+    redirectTo: `${env.PUBLIC_SITE_URL}/reset-password`,
   });
 
   if (error) {

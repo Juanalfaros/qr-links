@@ -1,13 +1,32 @@
 import { defineMiddleware } from 'astro:middleware';
 import { env } from 'cloudflare:workers';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServerClient } from './lib/supabase/server';
 import { createSupabaseAdminClient } from './lib/supabase/admin';
 import { hashApiToken } from './lib/api-tokens';
+
+// A transient network hiccup here must not crash /login or /setup — fail
+// toward "already onboarded" (false), the safer default: worst case a
+// legitimate first-run deployer briefly sees the normal login page instead
+// of /setup and can just retry, rather than risking /setup staying open to
+// an anonymous visitor because we couldn't confirm the real state.
+async function isOnboardingNeeded(supabase: SupabaseClient): Promise<boolean> {
+  try {
+    const { data } = await supabase.rpc('onboarding_needed');
+    return Boolean(data);
+  } catch (err) {
+    console.error('failed to resolve onboarding_needed()', err);
+    return false;
+  }
+}
 
 const needsSession = (pathname: string) =>
   pathname.startsWith('/admin') ||
   pathname.startsWith('/superadmin') ||
   pathname === '/login' ||
+  pathname === '/setup' ||
+  pathname === '/forgot-password' ||
+  pathname === '/reset-password' ||
   pathname.startsWith('/api/');
 
 interface ApiTokenLookupRow {
@@ -105,6 +124,24 @@ export const onRequest = defineMiddleware(async ({ request, locals, cookies, url
     // A transient network/DNS failure reaching Supabase must not 500 every
     // protected page — treat it the same as "not authenticated".
     console.error('failed to resolve Supabase session', err);
+  }
+
+  // First-run onboarding gate. Scoped narrowly to only the unauthenticated
+  // entry points (/setup itself, and /login deciding whether to redirect
+  // there instead) — never re-checked on the authenticated /admin*/
+  // /superadmin* hot path, same "expensive check, narrow scope" philosophy
+  // as the MFA gate below.
+  if (url.pathname === '/setup') {
+    if (locals.user) {
+      return redirect('/admin/dashboard');
+    }
+    if (!(await isOnboardingNeeded(supabase))) {
+      return redirect('/login');
+    }
+  } else if (url.pathname === '/login' && !locals.user) {
+    if (await isOnboardingNeeded(supabase)) {
+      return redirect('/setup');
+    }
   }
 
   const isProtected = url.pathname.startsWith('/admin') || url.pathname.startsWith('/superadmin');

@@ -1,5 +1,9 @@
 ---
 import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { getBranding } from '@/lib/branding';
+
+const branding = await getBranding(Astro.locals.supabase);
+const tokenExample = `${branding.tokenPrefix}...`;
 ---
 
 <DashboardLayout title="Documentación de la API">
@@ -10,7 +14,8 @@ import DashboardLayout from '@/layouts/DashboardLayout.astro';
         Generá un token en <a href="/admin/api-tokens" class="underline underline-offset-2">Tokens de API</a> y enviálo en
         cada request como header:
       </p>
-      <pre class="bg-muted overflow-x-auto rounded-md p-3 text-xs"><code>Authorization: Bearer qrgyg_...</code></pre>
+      <pre
+        class="bg-muted overflow-x-auto rounded-md p-3 text-xs"><code>Authorization: Bearer {tokenExample}</code></pre>
     </section>
 
     <section class="flex flex-col gap-2">
@@ -18,7 +23,7 @@ import DashboardLayout from '@/layouts/DashboardLayout.astro';
       <pre
         class="bg-muted overflow-x-auto rounded-md p-3 text-xs"><code>GET /api/public/links?limit=20
 
-curl -H "Authorization: Bearer qrgyg_..." \
+curl -H "Authorization: Bearer {tokenExample}" \
   "https://tu-dominio/api/public/links"</code></pre>
     </section>
 
@@ -30,7 +35,7 @@ Content-Type: application/json
 
 &#123; "title": "Mi link", "destination_url": "https://ejemplo.com" &#125;
 
-curl -X POST -H "Authorization: Bearer qrgyg_..." \
+curl -X POST -H "Authorization: Bearer {tokenExample}" \
   -H "Content-Type: application/json" \
   -d '&#123;"title":"Mi link","destination_url":"https://ejemplo.com"&#125;' \
   "https://tu-dominio/api/public/links"</code></pre>

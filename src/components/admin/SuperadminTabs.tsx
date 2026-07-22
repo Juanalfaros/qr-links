@@ -4,7 +4,9 @@ import { UsersDataTable } from '@/components/admin/UsersDataTable';
 import { GlobalLinksTable } from '@/components/admin/GlobalLinksTable';
 import { AuditLogTable } from '@/components/admin/AuditLogTable';
 import { SimpleListManager } from '@/components/admin/SimpleListManager';
+import { DangerZoneCard } from '@/components/admin/DangerZoneCard';
 import { AlertRulesManager } from '@/components/admin/AlertRulesManager';
+import { BrandingManager } from '@/components/admin/BrandingManager';
 import { KpiCards } from '@/components/analytics/KpiCards';
 import { ClicksOverTime } from '@/components/analytics/ClicksOverTime';
 import { BreakdownCard } from '@/components/analytics/BreakdownCard';
@@ -23,6 +25,7 @@ import type {
   ProfileRow,
 } from '@/lib/types';
 import type { LinkAnalyticsStats } from '@/lib/analytics';
+import type { Branding } from '@/lib/branding';
 
 interface SuperadminTabsProps {
   users: ProfileRow[];
@@ -38,6 +41,7 @@ interface SuperadminTabsProps {
   defaultTab: string;
   linksPage: number;
   linksTotalPages: number;
+  branding: Branding;
 }
 
 export function SuperadminTabs({
@@ -54,6 +58,7 @@ export function SuperadminTabs({
   defaultTab,
   linksPage,
   linksTotalPages,
+  branding,
 }: SuperadminTabsProps) {
   const topCountry = companyStats.byCountry[0]?.label ?? 'N/A';
   const topDevice = companyStats.byDevice[0]?.label ?? 'N/A';
@@ -67,6 +72,7 @@ export function SuperadminTabs({
           <TabsTrigger value="analytics">Analíticas</TabsTrigger>
           <TabsTrigger value="alerts">Alertas</TabsTrigger>
           <TabsTrigger value="security">Seguridad</TabsTrigger>
+          <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="audit">Auditoría</TabsTrigger>
         </TabsList>
       </div>
@@ -143,6 +149,12 @@ export function SuperadminTabs({
             tone="pink"
           />
         </div>
+        <div className="mt-4">
+          <DangerZoneCard branding={branding} />
+        </div>
+      </TabsContent>
+      <TabsContent value="branding">
+        <BrandingManager initialBranding={branding} />
       </TabsContent>
       <TabsContent value="audit">
         <AuditLogTable entries={auditLog} />

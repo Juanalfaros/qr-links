@@ -10,15 +10,16 @@ import {
   UserIcon,
   Key01Icon,
 } from '@hugeicons/core-free-icons';
-import { siteConfig } from '@/lib/config';
 import type { UserRole } from '@/lib/types';
 
 interface Props {
   currentPath: string;
   role: UserRole;
+  name: string;
+  logoUrl: string | null;
 }
 
-const { currentPath, role } = Astro.props;
+const { currentPath, role, name, logoUrl } = Astro.props;
 
 const navSections = [
   {
@@ -51,10 +52,14 @@ const navSections = [
         /* White chip regardless of theme — the sidebar is always dark, and the
           logo's own fixed colors aren't guaranteed to read on a dark fill. */
       }
-      <span class="flex size-10 items-center justify-center rounded-xl bg-white p-1.5">
-        <img src={siteConfig.logoUrl} alt="" class="size-full object-contain" />
-      </span>
-      <span class="font-heading text-sidebar-foreground text-lg font-semibold tracking-tight">{siteConfig.name}</span>
+      {
+        logoUrl && (
+          <span class="flex size-10 items-center justify-center rounded-xl bg-white p-1.5">
+            <img src={logoUrl} alt="" class="size-full object-contain" />
+          </span>
+        )
+      }
+      <span class="font-heading text-sidebar-foreground text-lg font-semibold tracking-tight">{name}</span>
     </div>
     <button
       id="sidebar-close"

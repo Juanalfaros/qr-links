@@ -15,10 +15,11 @@ import type { LinkRow } from '@/lib/types';
 
 interface CreateLinkDialogProps {
   siteUrl: string;
+  logoUrl: string | null;
   onCreated: (link: LinkRow) => void;
 }
 
-export function CreateLinkDialog({ siteUrl, onCreated }: CreateLinkDialogProps) {
+export function CreateLinkDialog({ siteUrl, logoUrl, onCreated }: CreateLinkDialogProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [destinationUrl, setDestinationUrl] = useState('');
@@ -100,7 +101,7 @@ export function CreateLinkDialog({ siteUrl, onCreated }: CreateLinkDialogProps) 
         </DialogHeader>
 
         {createdLink ? (
-          <QrCodeDisplay value={`${siteUrl}/${createdLink.short_code}`} />
+          <QrCodeDisplay value={`${siteUrl}/${createdLink.short_code}`} logoUrl={logoUrl} />
         ) : (
           // form has an id (not wrapping the footer via display:contents) —
           // position:sticky on DialogFooter doesn't compute a correct

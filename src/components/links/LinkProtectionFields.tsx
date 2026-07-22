@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowDown01Icon } from '@hugeicons/core-free-icons';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 
 interface LinkProtectionFieldsProps {
@@ -65,9 +66,8 @@ export function LinkProtectionFields({
           <Label htmlFor={`${idPrefix}-password`}>
             {hasExistingPassword ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña (opcional)'}
           </Label>
-          <Input
+          <PasswordInput
             id={`${idPrefix}-password`}
-            type="password"
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
             placeholder={hasExistingPassword ? '••••••••' : 'Sin contraseña'}

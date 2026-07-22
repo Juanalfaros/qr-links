@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createTokenSchema } from '@/lib/schemas/tokens';
 import { firstErrorMessage } from '@/lib/schemas/validate';
 import { generateApiToken, hashApiToken } from '@/lib/api-tokens';
+import { getBranding } from '@/lib/branding';
 
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) {
@@ -30,7 +31,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ error: firstErrorMessage(parsed) }), { status: 400 });
   }
 
-  const token = generateApiToken();
+  const branding = await getBranding(locals.supabase);
+  const token = generateApiToken(branding.tokenPrefix);
   const token_hash = await hashApiToken(token);
 
   const { data, error } = await locals.supabase

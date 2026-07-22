@@ -23,6 +23,7 @@ import type { LinkRow } from '@/lib/types';
 
 interface LinkRowActionsProps {
   siteUrl: string;
+  logoUrl: string | null;
   link: LinkRow;
   isArchived: boolean;
   onUpdated: (link: LinkRow) => void;
@@ -33,6 +34,7 @@ interface LinkRowActionsProps {
 
 export function LinkRowActions({
   siteUrl,
+  logoUrl,
   link,
   isArchived,
   onUpdated,
@@ -105,7 +107,7 @@ export function LinkRowActions({
           <DialogHeader>
             <DialogTitle>Código QR</DialogTitle>
           </DialogHeader>
-          <QrCodeDisplay value={`${siteUrl}/${link.short_code}`} />
+          <QrCodeDisplay value={`${siteUrl}/${link.short_code}`} logoUrl={logoUrl} />
         </DialogContent>
       </Dialog>
 
