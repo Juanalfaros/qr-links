@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "qr-link",
+  // Custom entrypoint (not the adapter's default) so it can also export a
+  // `scheduled` handler for Cron Triggers — see src/worker-entry.ts.
+  "main": "src/worker-entry.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // No `vars` block: PUBLIC_SITE_URL, PUBLIC_TURNSTILE_SITE_KEY, and
+  // RESEND_FROM_EMAIL are deployment-specific (a real domain, a Turnstile
+  // site key tied to your account, a verified sender) and deliberately kept
+  // out of this committed file — set them in `.dev.vars` locally and as
+  // Cloudflare secrets (`wrangler secret put <NAME>` or the dashboard) for
+  // real deploys. They're read identically either way via `env.X`.
+  //
+  // Secrets (never here): SUPABASE_URL, SUPABASE_ANON_KEY,
+  // SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, PUBLIC_SITE_URL,
+  // PUBLIC_TURNSTILE_SITE_KEY, RESEND_FROM_EMAIL.
+  "triggers": {
+    // Both free on Cloudflare's plan (5 cron triggers per account). Must
+    // match the cron strings checked in src/worker-entry.ts exactly.
+    "crons": [
+      "0 * * * *", // hourly: alert_rules check
+      "0 8 * * 1", // weekly, Monday 08:00 UTC: company-wide digest email
+    ],
+  },
+  "kv_namespaces": [
+    // Rate limiting del redirect público (src/lib/rate-limit.ts). Gratis:
+    // 100k lecturas/1k escrituras por día en el plan free de Cloudflare.
+    // The placeholder "id" below is replaced by scripts/generate-wrangler-config.mjs
+    // (reads the RATE_LIMIT_KV_ID env var — from .dev.vars locally, or the
+    // environment in CI/Cloudflare Workers Builds) — create the real
+    // namespace with `wrangler kv namespace create RATE_LIMIT_KV`.
+    // "remote": true makes local dev use the real namespace too (not a
+    // simulated one), consuming the same quota as production.
+    { "binding": "RATE_LIMIT_KV", "id": "__RATE_LIMIT_KV_ID__", "remote": true },
+  ],
+}

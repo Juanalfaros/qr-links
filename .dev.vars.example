@@ -5,3 +5,21 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 # weekly digest and alert-rule cron jobs (src/lib/cron/*.ts) — leaving this
 # unset just means those emails silently fail to send, nothing else breaks.
 RESEND_API_KEY=your-resend-api-key
+
+# Deployment-specific — kept out of wrangler.jsonc so no single deployer's
+# real values end up in a repo other people might clone. Set for real via
+# `wrangler secret put <NAME>` (or the Cloudflare dashboard) when deploying;
+# read identically either way via env.X.
+PUBLIC_SITE_URL=http://localhost:4321
+# Cloudflare's official test key (always passes, works on any domain
+# including localhost). Replace with a real site key before deploying, and
+# enter the matching secret key in Supabase's Auth settings ("Enable Captcha
+# protection") — that toggle is what actually turns on enforcement server-side.
+PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+# Must be on a domain verified in Resend.
+RESEND_FROM_EMAIL=digest@example.com
+
+# Not read by the app at runtime — configures the RATE_LIMIT_KV Wrangler
+# *binding* (see wrangler.template.jsonc + scripts/generate-wrangler-config.mjs).
+# Create the real namespace with `wrangler kv namespace create RATE_LIMIT_KV`.
+RATE_LIMIT_KV_ID=your-kv-namespace-id

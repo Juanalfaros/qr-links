@@ -7,8 +7,9 @@
   },
   "packageManager": "pnpm@11.9.0",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "wrangler:config": "node scripts/generate-wrangler-config.mjs",
+    "dev": "pnpm wrangler:config && astro dev",
+    "build": "pnpm wrangler:config && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "lint": "eslint .",

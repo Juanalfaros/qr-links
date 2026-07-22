@@ -19,6 +19,10 @@ pnpm-debug.log*
 .env.production
 .dev.vars
 
+# generated from wrangler.template.jsonc by scripts/generate-wrangler-config.mjs
+# — keeps deployment-specific values (KV namespace id, site URL, etc.) out of git
+wrangler.jsonc
+
 # wrangler local state
 .wrangler/
 

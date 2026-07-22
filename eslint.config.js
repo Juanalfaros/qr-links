@@ -36,4 +36,11 @@ export default defineConfig(
       globals: { document: 'readonly', window: 'readonly' },
     },
   },
+  {
+    // Standalone Node CLI scripts (run via `node`, not bundled by Astro/Vite).
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { process: 'readonly', console: 'readonly' },
+    },
+  },
 );

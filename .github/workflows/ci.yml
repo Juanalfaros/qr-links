@@ -22,10 +22,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Cloudflare/Wrangler types
+      - name: Generate wrangler.jsonc and Cloudflare/Wrangler types
         run: |
           cp .dev.vars.example .dev.vars
+          pnpm exec node scripts/generate-wrangler-config.mjs
           pnpm exec wrangler types
+        env:
+          # Placeholder — CI never actually connects to KV, just needs the
+          # binding to resolve so type-check/build can run.
+          RATE_LIMIT_KV_ID: placeholder-ci-kv-id
 
       - name: Type check
         run: pnpm exec astro check
