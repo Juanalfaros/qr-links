@@ -41,7 +41,7 @@ const today = new Date().toISOString().slice(0, 10);
 if (clientIp) {
   const rateLimit = await checkRateLimit(
     env.RATE_LIMIT_KV,
-    clientIp,
+    `redirect:${clientIp}`,
     siteConfig.security.redirectRateLimit.limit,
     siteConfig.security.redirectRateLimit.windowSeconds,
   );
@@ -164,6 +164,9 @@ const branding = await getBranding(supabase);
   title={needsPassword ? 'Enlace protegido' : 'Vas a salir de este sitio'}
   siteName={branding.name}
   faviconUrl={branding.faviconUrl}
+  hue={branding.hue}
+  radiusRem={branding.radiusRem}
+  sidebarStyle={branding.sidebarStyle}
 >
   {
     !needsPassword && result.ga_tracking_id && (

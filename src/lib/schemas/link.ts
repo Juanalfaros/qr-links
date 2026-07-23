@@ -16,7 +16,12 @@ const integrationFields = {
   // Client converts an empty input to `null` before sending, same convention
   // as expires_at/max_clicks above.
   webhook_url: z.url('webhook_url must be a valid URL').nullable(),
-  ga_tracking_id: z.string().trim().min(1).max(32).nullable(),
+  ga_tracking_id: z
+    .string()
+    .trim()
+    .max(32)
+    .regex(/^(G|UA)-.+$/, 'ga_tracking_id must look like G-XXXXXXX or UA-XXXXXXX-X')
+    .nullable(),
 };
 
 export const createLinkSchema = z

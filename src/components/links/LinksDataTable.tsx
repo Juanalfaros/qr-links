@@ -16,10 +16,11 @@ interface LinksDataTableProps {
   initialLinks: LinkRow[];
   siteUrl: string;
   logoUrl: string | null;
+  qrDarkColor?: string | null;
   isArchived: boolean;
 }
 
-export function LinksDataTable({ initialLinks, siteUrl, logoUrl, isArchived }: LinksDataTableProps) {
+export function LinksDataTable({ initialLinks, siteUrl, logoUrl, qrDarkColor, isArchived }: LinksDataTableProps) {
   const [links, setLinks] = useState<LinkRow[]>(initialLinks);
 
   const handleUpdated = (updated: LinkRow) => {
@@ -95,6 +96,7 @@ export function LinksDataTable({ initialLinks, siteUrl, logoUrl, isArchived }: L
         <LinkRowActions
           siteUrl={siteUrl}
           logoUrl={logoUrl}
+          qrDarkColor={qrDarkColor}
           link={row.original}
           isArchived={isArchived}
           onUpdated={handleUpdated}
@@ -116,6 +118,7 @@ export function LinksDataTable({ initialLinks, siteUrl, logoUrl, isArchived }: L
           <CreateLinkDialog
             siteUrl={siteUrl}
             logoUrl={logoUrl}
+            qrDarkColor={qrDarkColor}
             onCreated={(link) => setLinks((prev) => [link, ...prev])}
           />
         </div>
@@ -130,6 +133,16 @@ export function LinksDataTable({ initialLinks, siteUrl, logoUrl, isArchived }: L
               ? 'Los links que archives aparecerán aquí.'
               : 'Crea tu primer link para empezar a compartirlo y ver sus analíticas.'
           }
+          action={
+            !isArchived && (
+              <CreateLinkDialog
+                siteUrl={siteUrl}
+                logoUrl={logoUrl}
+                qrDarkColor={qrDarkColor}
+                onCreated={(link) => setLinks((prev) => [link, ...prev])}
+              />
+            )
+          }
         />
       ) : (
         <>
@@ -141,6 +154,7 @@ export function LinksDataTable({ initialLinks, siteUrl, logoUrl, isArchived }: L
                 link={link}
                 siteUrl={siteUrl}
                 logoUrl={logoUrl}
+                qrDarkColor={qrDarkColor}
                 isArchived={isArchived}
                 onUpdated={handleUpdated}
                 onDeleted={handleRemoved}

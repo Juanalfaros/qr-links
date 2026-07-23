@@ -84,6 +84,7 @@ const buildHref = (p: number) => {
       initialLinks={links}
       siteUrl={env.PUBLIC_SITE_URL}
       logoUrl={branding.logoUrl}
+      qrDarkColor={branding.qrDarkColor}
       isArchived={status === 'archived'}
     />
     <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />

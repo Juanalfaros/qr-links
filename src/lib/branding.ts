@@ -5,6 +5,10 @@ export interface Branding {
   logoUrl: string | null;
   faviconUrl: string | null;
   tokenPrefix: string;
+  hue: number | null;
+  radiusRem: number | null;
+  sidebarStyle: 'dark' | 'brand' | null;
+  qrDarkColor: string | null;
 }
 
 // Generic fallback — used before /setup has run, if the branding_settings
@@ -15,6 +19,10 @@ export const DEFAULT_BRANDING: Branding = {
   logoUrl: '/logo.svg',
   faviconUrl: '/favicon.svg',
   tokenPrefix: 'api_',
+  hue: null,
+  radiusRem: null,
+  sidebarStyle: null,
+  qrDarkColor: null,
 };
 
 // Deployment-specific confirmation phrase shown/checked on the superadmin
@@ -27,7 +35,7 @@ export function wipeConfirmationPhrase(companyName: string): string {
 export async function getBranding(supabase: SupabaseClient): Promise<Branding> {
   const { data } = await supabase
     .from('branding_settings')
-    .select('name, logo_url, favicon_url, token_prefix')
+    .select('name, logo_url, favicon_url, token_prefix, brand_hue, radius_rem, sidebar_style, qr_dark_color')
     .limit(1)
     .single();
 
@@ -38,5 +46,9 @@ export async function getBranding(supabase: SupabaseClient): Promise<Branding> {
     logoUrl: data.logo_url,
     faviconUrl: data.favicon_url,
     tokenPrefix: data.token_prefix,
+    hue: data.brand_hue,
+    radiusRem: data.radius_rem,
+    sidebarStyle: data.sidebar_style,
+    qrDarkColor: data.qr_dark_color,
   };
 }

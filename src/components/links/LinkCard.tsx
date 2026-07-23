@@ -9,6 +9,7 @@ interface LinkCardProps {
   link: LinkRow;
   siteUrl: string;
   logoUrl: string | null;
+  qrDarkColor?: string | null;
   isArchived: boolean;
   onUpdated: (link: LinkRow) => void;
   onDeleted: (id: string) => void;
@@ -20,6 +21,7 @@ export function LinkCard({
   link,
   siteUrl,
   logoUrl,
+  qrDarkColor,
   isArchived,
   onUpdated,
   onDeleted,
@@ -65,6 +67,7 @@ export function LinkCard({
           <LinkRowActions
             siteUrl={siteUrl}
             logoUrl={logoUrl}
+            qrDarkColor={qrDarkColor}
             link={link}
             isArchived={isArchived}
             onUpdated={onUpdated}

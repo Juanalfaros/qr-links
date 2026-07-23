@@ -4,6 +4,7 @@ interface TurnstileRenderOptions {
   sitekey: string;
   callback: (token: string) => void;
   'expired-callback'?: () => void;
+  'error-callback'?: () => void;
 }
 
 declare global {
@@ -42,13 +43,15 @@ export interface TurnstileHandle {
 interface TurnstileProps {
   siteKey: string;
   onVerify: (token: string) => void;
+  onExpire?: () => void;
+  onError?: () => void;
   ref?: React.Ref<TurnstileHandle>;
 }
 
 // Managed mode: invisible/near-instant for almost all real users. Loaded
 // on-demand here (not globally in BaseLayout) since only the login page
 // needs it.
-export function Turnstile({ siteKey, onVerify, ref }: TurnstileProps) {
+export function Turnstile({ siteKey, onVerify, onExpire, onError, ref }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
@@ -68,6 +71,8 @@ export function Turnstile({ siteKey, onVerify, ref }: TurnstileProps) {
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
         callback: onVerify,
+        'expired-callback': onExpire,
+        'error-callback': onError,
       });
     });
 

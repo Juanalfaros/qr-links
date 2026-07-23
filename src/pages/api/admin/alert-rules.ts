@@ -1,4 +1,6 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createAlertRuleSchema, deleteByIdSchema } from '@/lib/schemas/admin';
 import { firstErrorMessage } from '@/lib/schemas/validate';
 
@@ -19,6 +21,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ error: 'Solo un superadmin puede crear alertas de toda la empresa' }), {
       status: 403,
     });
+  }
+
+  // notify_email must belong to a profile in this instance — otherwise a
+  // user could exfiltrate click-count data to an arbitrary external address.
+  // Uses the admin client (not locals.supabase) because RLS only lets a
+  // plain "user" role see their own profile row — this check must find any
+  // profile in the instance, not just ones visible to the caller.
+  const admin = createSupabaseAdminClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  const { data: recipient, error: recipientError } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('email', parsed.data.notifyEmail)
+    .maybeSingle();
+
+  if (recipientError) {
+    return new Response(JSON.stringify({ error: recipientError.message }), { status: 500 });
+  }
+  if (!recipient) {
+    return new Response(
+      JSON.stringify({ error: 'notify_email debe ser el email de un usuario existente en esta instancia' }),
+      { status: 400 },
+    );
   }
 
   const { data, error } = await locals.supabase

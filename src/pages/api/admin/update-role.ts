@@ -12,12 +12,40 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ error: firstErrorMessage(parsed) }), { status: 400 });
   }
 
+  const { userId, role } = parsed.data;
+
+  if (role !== 'superadmin') {
+    const { data: target, error: targetError } = await locals.supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (targetError) {
+      return new Response(JSON.stringify({ error: targetError.message }), { status: 500 });
+    }
+
+    if (target.role === 'superadmin') {
+      const { count, error: countError } = await locals.supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'superadmin');
+
+      if (countError) {
+        return new Response(JSON.stringify({ error: countError.message }), { status: 500 });
+      }
+
+      if ((count ?? 0) <= 1) {
+        return new Response(JSON.stringify({ error: 'No podés quitarle el rol de superadmin al único superadmin' }), {
+          status: 400,
+        });
+      }
+    }
+  }
+
   // Deliberately not the admin client: this is a plain data change already
   // covered by the profiles_update_superadmin RLS policy.
-  const { error } = await locals.supabase
-    .from('profiles')
-    .update({ role: parsed.data.role })
-    .eq('id', parsed.data.userId);
+  const { error } = await locals.supabase.from('profiles').update({ role }).eq('id', userId);
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });

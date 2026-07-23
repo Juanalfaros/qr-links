@@ -1,9 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { validateBrandingFile } from './file-validation';
 
-const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
-
+// SVG deliberately excluded: this bucket is public, so an uploaded SVG would
+// be served from the Supabase storage domain and could carry a <script>/
+// event-handler payload — a stored-XSS vector. Raster-only avoids that whole
+// class of issue.
 const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
-  'image/svg+xml': 'svg',
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/x-icon': 'ico',
@@ -25,12 +27,14 @@ export async function uploadBrandingAsset(
   slot: 'logo' | 'favicon',
   file: File,
 ): Promise<string> {
+  const validation = validateBrandingFile(file);
+  if (!validation.valid) {
+    throw new BrandingAssetError(validation.error);
+  }
+
   const extension = EXTENSION_BY_MIME_TYPE[file.type];
   if (!extension) {
     throw new BrandingAssetError(`Formato de imagen no soportado: ${file.type || 'desconocido'}`);
-  }
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    throw new BrandingAssetError('La imagen supera el tamaño máximo permitido (2MB).');
   }
 
   const path = `${slot}-${crypto.randomUUID()}.${extension}`;

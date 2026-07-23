@@ -40,7 +40,7 @@ export function PasswordStrengthMeter({ password, confirmPassword }: PasswordStr
           )}
         >
           <HugeiconsIcon icon={matchOk ? Tick02Icon : Cancel01Icon} size={13} />
-          Las contraseñas coinciden
+          {matchOk ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden'}
         </p>
       )}
     </div>

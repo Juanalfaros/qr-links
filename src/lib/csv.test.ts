@@ -13,4 +13,13 @@ describe('toCsv', () => {
   it('renders null as an empty cell', () => {
     expect(toCsv(['x'], [[null]])).toBe('x\r\n');
   });
+
+  it('neutralizes values that look like spreadsheet formulas', () => {
+    expect(toCsv(['x'], [['=HYPERLINK("http://evil.test")']])).toBe('x\r\n"\'=HYPERLINK(""http://evil.test"")"');
+    expect(toCsv(['x'], [['+1234'], ['-1234']])).toBe("x\r\n'+1234\r\n'-1234");
+  });
+
+  it('leaves values that merely contain formula characters mid-string alone', () => {
+    expect(toCsv(['x'], [['5+3=8']])).toBe('x\r\n5+3=8');
+  });
 });

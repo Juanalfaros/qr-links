@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { generateShortCode } from '@/lib/short-code';
 import { createLinkSchema } from '@/lib/schemas/link';
 import { firstErrorMessage } from '@/lib/schemas/validate';
-import { validateDestinationUrl } from '@/lib/url-validation';
+import { validateDestinationUrl, validateWebhookUrl } from '@/lib/url-validation';
 import { siteConfig } from '@/lib/config';
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -20,6 +20,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const urlCheck = await validateDestinationUrl(locals.supabase, destination_url);
   if (!urlCheck.valid) {
     return new Response(JSON.stringify({ error: urlCheck.error }), { status: 400 });
+  }
+
+  if (rest.webhook_url) {
+    const webhookCheck = validateWebhookUrl(rest.webhook_url);
+    if (!webhookCheck.valid) {
+      return new Response(JSON.stringify({ error: webhookCheck.error }), { status: 400 });
+    }
   }
 
   const { data: quotaOk, error: quotaError } = await locals.supabase.rpc('check_and_increment_link_quota', {

@@ -11,6 +11,7 @@ interface QrCodeDisplayProps {
   value: string;
   size?: number;
   logoUrl: string | null;
+  defaultDarkColor?: string | null;
 }
 
 // Print-friendly presets at ~300dpi, alongside the screen default.
@@ -29,10 +30,15 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function QrCodeDisplay({ value, size: initialSize = siteConfig.qr.defaultSize, logoUrl }: QrCodeDisplayProps) {
+export function QrCodeDisplay({
+  value,
+  size: initialSize = siteConfig.qr.defaultSize,
+  logoUrl,
+  defaultDarkColor,
+}: QrCodeDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState(initialSize);
-  const [darkColor, setDarkColor] = useState('#000000');
+  const [darkColor, setDarkColor] = useState(defaultDarkColor ?? '#000000');
   const [lightColor, setLightColor] = useState('#ffffff');
   const [includeLogo, setIncludeLogo] = useState(false);
   const [includeFrame, setIncludeFrame] = useState(false);

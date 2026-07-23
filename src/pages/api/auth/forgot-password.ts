@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (clientIp) {
     const rateLimit = await checkRateLimit(
       env.RATE_LIMIT_KV,
-      clientIp,
+      `forgot-password:${clientIp}`,
       siteConfig.security.forgotPasswordRateLimit.limit,
       siteConfig.security.forgotPasswordRateLimit.windowSeconds,
     );

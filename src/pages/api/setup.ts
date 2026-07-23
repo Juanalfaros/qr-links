@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { setupSchema } from '@/lib/schemas/setup';
 import { firstErrorMessage } from '@/lib/schemas/validate';
 import { uploadBrandingAsset, BrandingAssetError } from '@/lib/storage';
+import { parseNullableNumberField } from '@/lib/schemas/form-fields';
 
 export const POST: APIRoute = async ({ request }) => {
   const admin = createSupabaseAdminClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
@@ -22,11 +23,15 @@ export const POST: APIRoute = async ({ request }) => {
     email: formData.get('email'),
     password: formData.get('password'),
     companyName: formData.get('companyName'),
+    hue: parseNullableNumberField(formData.get('hue')),
   });
   if (!parsed.success) {
-    return new Response(JSON.stringify({ error: firstErrorMessage(parsed) }), { status: 400 });
+    const isEmailIssue = parsed.error.issues.some((issue) => issue.path[0] === 'email');
+    return new Response(JSON.stringify({ error: firstErrorMessage(parsed), ...(isEmailIssue && { field: 'email' }) }), {
+      status: 400,
+    });
   }
-  const { email, password, companyName } = parsed.data;
+  const { email, password, companyName, hue } = parsed.data;
 
   const logoFile = formData.get('logo');
   const faviconFile = formData.get('favicon');
@@ -43,9 +48,13 @@ export const POST: APIRoute = async ({ request }) => {
       email_confirm: true,
     });
     if (createError || !created.user) {
-      return new Response(JSON.stringify({ error: createError?.message ?? 'No se pudo crear la cuenta' }), {
-        status: 500,
-      });
+      // The only realistic failure here (email format is already validated
+      // above) is a duplicate/already-registered email — flag it so the
+      // client can send the user back to the email field on step 1.
+      return new Response(
+        JSON.stringify({ error: createError?.message ?? 'No se pudo crear la cuenta', field: 'email' }),
+        { status: 500 },
+      );
     }
 
     const { error: promoteError } = await admin
@@ -62,6 +71,7 @@ export const POST: APIRoute = async ({ request }) => {
         name: companyName,
         ...(logoUrl && { logo_url: logoUrl }),
         ...(faviconUrl && { favicon_url: faviconUrl }),
+        ...(hue !== undefined && { brand_hue: hue }),
       })
       .eq('id', 1);
     if (brandingError) {

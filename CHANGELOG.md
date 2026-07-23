@@ -3,6 +3,34 @@
 Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.2.0] - 2026-07-23
+
+### Agregado
+
+- Personalización de apariencia desde el panel de superadmin: color de marca (rota el hue de toda la paleta OKLCH preservando contraste), redondeo de esquinas, estilo del sidebar (oscuro/color de marca) y color de QR por defecto — con selector de color de marca opcional también en `/setup`.
+- Guarda de "último superadmin": ya no se puede degradar o quitarle el rol al único superadmin restante (validado en la ruta y con un trigger de base de datos como red de seguridad).
+- Validación de host para `webhook_url` de links: bloquea que apunte a `localhost` o rangos de IP privados/loopback/link-local (mitiga SSRF).
+
+### Corregido (seguridad)
+
+- Neutralización de inyección de fórmulas (`=`, `+`, `-`, `@`) en las exportaciones CSV de analíticas.
+- `notify_email` de las reglas de alerta ahora debe corresponder al email de un usuario existente en la instancia, no cualquier dirección.
+- `avatar_url` del perfil validado como URL real.
+- Se quitó `image/svg+xml` del allowlist de subida de logo/favicon (mitiga XSS almacenado servido desde el bucket público de branding).
+- Namespacing de claves de rate-limit por ruta (redirect y forgot-password ya no comparten balde).
+- Una fecha inválida en el export CSV de analíticas ahora responde 400 en vez de romper con un 500.
+- El RPC de cuota diaria de creación de links ya no confía en un `p_user_id` arbitrario cuando la llamada viene de una sesión autenticada.
+
+### Mejorado (UX del onboarding)
+
+- Mensajes de error del wizard de `/setup` en español.
+- El widget de Turnstile ahora limpia el token al expirar y muestra un error si falla, en vez de quedar en un estado inconsistente.
+- Un error de email duplicado en el submit final vuelve al usuario al paso 1 en vez de mostrar el error sin contexto.
+- Si la cuenta se crea pero el inicio de sesión automático falla, se muestra una pantalla clara con link a `/login` en vez de dejar el formulario en un estado ambiguo.
+- Preview de imagen real y validación de tipo/tamaño en el momento de soltar el archivo, no recién al enviar el formulario.
+- Accesibilidad: errores anunciados con `role="alert"`, descripción de paso con `aria-live`.
+- El estado vacío del listado de links ahora tiene su propio botón para crear el primer link.
+
 ## [0.1.0] - 2026-07-21
 
 ### Agregado

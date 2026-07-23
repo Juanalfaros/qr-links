@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { updateLinkSchema } from '@/lib/schemas/link';
 import { firstErrorMessage } from '@/lib/schemas/validate';
-import { validateDestinationUrl } from '@/lib/url-validation';
+import { validateDestinationUrl, validateWebhookUrl } from '@/lib/url-validation';
 
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
   if (!locals.user) {
@@ -21,6 +21,13 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     const urlCheck = await validateDestinationUrl(locals.supabase, columns.destination_url);
     if (!urlCheck.valid) {
       return new Response(JSON.stringify({ error: urlCheck.error }), { status: 400 });
+    }
+  }
+
+  if (columns.webhook_url) {
+    const webhookCheck = validateWebhookUrl(columns.webhook_url);
+    if (!webhookCheck.valid) {
+      return new Response(JSON.stringify({ error: webhookCheck.error }), { status: 400 });
     }
   }
 

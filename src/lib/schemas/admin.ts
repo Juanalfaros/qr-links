@@ -52,6 +52,18 @@ export const updateBrandingSchema = z.object({
     .min(1, 'tokenPrefix is required')
     .max(20, 'tokenPrefix must be at most 20 characters')
     .regex(/^[a-z0-9_]+_$/, 'tokenPrefix must be lowercase letters/numbers/underscores and end with "_"'),
+  // All nullable+optional: null clears back to the hardcoded default,
+  // omitted (undefined) leaves the column untouched — lets /api/setup send
+  // only a subset (or none) of these without failing validation.
+  hue: z.number().int().min(0).max(359).nullable().optional(),
+  radiusRem: z.number().min(0).max(2).nullable().optional(),
+  sidebarStyle: z.enum(['dark', 'brand']).nullable().optional(),
+  qrDarkColor: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-f]{6}$/i, 'qrDarkColor must look like #rrggbb')
+    .nullable()
+    .optional(),
 });
 
 export const wipeDataSchema = z.object({

@@ -9,6 +9,12 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
   const from = url.searchParams.get('from');
   const to = url.searchParams.get('to');
 
+  const fromDate = from ? new Date(from) : null;
+  const toDate = to ? new Date(`${to}T23:59:59.999Z`) : null;
+  if ((fromDate && isNaN(fromDate.getTime())) || (toDate && isNaN(toDate.getTime()))) {
+    return new Response('Invalid from/to date', { status: 400 });
+  }
+
   // RLS (analytics_select_own_or_superadmin) scopes this to the caller's own
   // links or, for a superadmin, any link — a non-owner requesting someone
   // else's id just gets zero rows back.
@@ -18,8 +24,8 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
     .eq('link_id', params.id)
     .order('scanned_at', { ascending: true });
 
-  if (from) query = query.gte('scanned_at', new Date(from).toISOString());
-  if (to) query = query.lte('scanned_at', new Date(`${to}T23:59:59.999Z`).toISOString());
+  if (fromDate) query = query.gte('scanned_at', fromDate.toISOString());
+  if (toDate) query = query.lte('scanned_at', toDate.toISOString());
 
   const { data, error } = await query;
   if (error) {

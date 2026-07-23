@@ -12,6 +12,10 @@ import { PasswordStrengthMeter } from '@/components/auth/PasswordStrengthMeter';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-strength';
 
+// Matches accent-blue's own hue (the identity/no-op value) — the slider
+// opens here so an untouched drag still produces a harmless brand_hue=245.
+const DEFAULT_HUE = 245;
+
 interface SetupFormProps {
   supabaseUrl: string;
   supabaseAnonKey: string;
@@ -28,9 +32,12 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
   const [companyName, setCompanyName] = useState('');
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
+  const [customizeHue, setCustomizeHue] = useState(false);
+  const [hue, setHue] = useState(DEFAULT_HUE);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [accountCreatedButSignInFailed, setAccountCreatedButSignInFailed] = useState(false);
   const turnstileRef = useRef<TurnstileHandle>(null);
 
   const lengthOk = password.length >= MIN_PASSWORD_LENGTH;
@@ -56,11 +63,18 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
     formData.append('companyName', companyName);
     if (logo) formData.append('logo', logo);
     if (favicon) formData.append('favicon', favicon);
+    formData.append('hue', customizeHue ? String(hue) : '');
 
     const res = await fetch('/api/setup', { method: 'POST', body: formData });
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    const body = (await res.json().catch(() => ({}))) as { error?: string; field?: string };
 
     if (!res.ok) {
+      // The email field lives on step 1, but this error can only surface
+      // here on the step-2 submit — jump back so the user sees it next to
+      // the field it actually refers to.
+      if (body.field === 'email') {
+        setStep('account');
+      }
       setError(body.error ?? 'No se pudo completar la configuración inicial');
       setLoading(false);
       turnstileRef.current?.reset();
@@ -80,13 +94,41 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
     });
 
     if (signInError) {
-      setError(signInError.message);
+      // The account (and its branding) were already created successfully at
+      // this point — leaving the form re-submittable would just hit the
+      // "already completed" 409 on a second try. Point the user at /login
+      // instead of implying setup itself failed.
+      setAccountCreatedButSignInFailed(true);
       setLoading(false);
       return;
     }
 
     window.location.assign('/admin/dashboard');
   };
+
+  if (accountCreatedButSignInFailed) {
+    return (
+      <Card className="w-full max-w-lg shadow-[var(--shadow-card-lg)]">
+        <CardHeader className="gap-3 pb-4">
+          <div className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-2xl">
+            <HugeiconsIcon icon={Building01Icon} size={20} />
+          </div>
+          <div>
+            <CardTitle className="font-heading text-xl">Cuenta creada</CardTitle>
+            <CardDescription>
+              Tu cuenta y la configuración de la empresa ya se guardaron, pero no pudimos iniciar tu sesión
+              automáticamente. Iniciá sesión con tus credenciales.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Button className="w-full" onClick={() => window.location.assign('/login')}>
+            Ir a iniciar sesión
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-lg shadow-[var(--shadow-card-lg)]">
@@ -96,7 +138,7 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
         </div>
         <div>
           <CardTitle className="font-heading text-xl">Configuración inicial</CardTitle>
-          <CardDescription>
+          <CardDescription aria-live="polite">
             {step === 'account'
               ? 'Crea la cuenta de administrador — paso 1 de 2'
               : 'Configura el nombre y logo de tu empresa — paso 2 de 2'}
@@ -169,9 +211,10 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
                   <Label htmlFor="setup-logo">Logo (opcional)</Label>
                   <FileDropzone
                     id="setup-logo"
-                    accept="image/svg+xml,image/png,image/jpeg"
+                    accept="image/png,image/jpeg"
                     file={logo}
                     onFileChange={setLogo}
+                    validateAsBrandingImage
                     hint="Se usa un logo genérico si se deja vacío"
                   />
                 </div>
@@ -179,18 +222,53 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
                   <Label htmlFor="setup-favicon">Favicon (opcional)</Label>
                   <FileDropzone
                     id="setup-favicon"
-                    accept="image/svg+xml,image/png,image/x-icon"
+                    accept="image/png,image/x-icon"
                     file={favicon}
                     onFileChange={setFavicon}
+                    validateAsBrandingImage
                     hint="Se usa un ícono genérico si se deja vacío"
                   />
                 </div>
               </div>
-              <Turnstile siteKey={turnstileSiteKey} onVerify={setCaptchaToken} ref={turnstileRef} />
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={customizeHue} onChange={(e) => setCustomizeHue(e.target.checked)} />
+                  Personalizar color de marca (opcional, se puede cambiar después)
+                </label>
+                {customizeHue && (
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={0}
+                      max={359}
+                      value={hue}
+                      onChange={(e) => setHue(Number(e.target.value))}
+                      aria-label="Tono de color de marca"
+                      className="accent-primary flex-1"
+                    />
+                    <div
+                      className="ring-foreground/10 size-8 shrink-0 rounded-full ring-1"
+                      style={{ backgroundColor: `oklch(0.78 0.09 ${hue})` }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                )}
+              </div>
+              <Turnstile
+                siteKey={turnstileSiteKey}
+                onVerify={setCaptchaToken}
+                onExpire={() => setCaptchaToken(null)}
+                onError={() => setError('No se pudo verificar el captcha. Intenta de nuevo.')}
+                ref={turnstileRef}
+              />
             </>
           )}
 
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {error && (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          )}
 
           <div className="mt-2 flex gap-2">
             {step === 'branding' && (

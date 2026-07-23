@@ -8,6 +8,7 @@ Acortador de enlaces dinámico y generador de códigos QR corporativo, multiusua
 
 - Onboarding inicial en `/setup`: crea la primera cuenta de superadmin y configura nombre/logo/favicon de la empresa (persistido en Supabase) sin tocar código ni variables de entorno.
 - Branding editable en cualquier momento desde el panel de superadmin (nombre, logo, favicon, prefijo de tokens de API) — el repo público no lleva ningún dato de marca hardcodeado.
+- Personalización de apariencia (panel de superadmin, y opcionalmente en `/setup`): color de marca, redondeo de esquinas, estilo del sidebar y color de QR por defecto — todo el sistema de diseño es OKLCH, así que un solo hue rota toda la paleta preservando contraste en ambos temas.
 - Login/logout con sesión basada en cookies (Supabase Auth), recuperación de contraseña self-service (`/forgot-password` → `/reset-password`) y cambio de contraseña desde el perfil.
 - Cada usuario crea, edita, archiva y elimina sus propios links, con código corto autogenerado o personalizado.
 - Generación de QR en PNG y SVG, con descarga directa.

@@ -119,8 +119,18 @@ export function LoginForm({
               />
             </div>
           </div>
-          <Turnstile siteKey={turnstileSiteKey} onVerify={setCaptchaToken} ref={turnstileRef} />
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          <Turnstile
+            siteKey={turnstileSiteKey}
+            onVerify={setCaptchaToken}
+            onExpire={() => setCaptchaToken(null)}
+            onError={() => setError('No se pudo verificar el captcha. Intenta de nuevo.')}
+            ref={turnstileRef}
+          />
+          {error && (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          )}
           <Button type="submit" disabled={loading || !captchaToken} className="mt-2">
             {loading ? 'Ingresando...' : 'Ingresar'}
           </Button>

@@ -1,14 +1,27 @@
 ---
 import '../styles/global.css';
 import { DEFAULT_BRANDING } from '@/lib/branding';
+import { buildThemeStyle } from '@/lib/theme';
 
 interface Props {
   title: string;
   siteName?: string;
   faviconUrl?: string | null;
+  hue?: number | null;
+  radiusRem?: number | null;
+  sidebarStyle?: 'dark' | 'brand' | null;
 }
 
-const { title, siteName = DEFAULT_BRANDING.name, faviconUrl = DEFAULT_BRANDING.faviconUrl } = Astro.props;
+const {
+  title,
+  siteName = DEFAULT_BRANDING.name,
+  faviconUrl = DEFAULT_BRANDING.faviconUrl,
+  hue,
+  radiusRem,
+  sidebarStyle,
+} = Astro.props;
+
+const themeCss = buildThemeStyle({ hue, radiusRem, sidebarStyle });
 ---
 
 <!doctype html>
@@ -28,6 +41,7 @@ const { title, siteName = DEFAULT_BRANDING.name, faviconUrl = DEFAULT_BRANDING.f
         document.documentElement.classList.toggle('dark', isDark);
       })();
     </script>
+    {themeCss && <style set:html={themeCss} />}
   </head>
   <body>
     <slot />
