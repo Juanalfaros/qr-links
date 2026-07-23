@@ -7,14 +7,12 @@ import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileDropzone } from '@/components/ui/file-dropzone';
+import { ColorField } from '@/components/ui/color-field';
 import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 import { PasswordStrengthMeter } from '@/components/auth/PasswordStrengthMeter';
+import { ThemePreview } from '@/components/admin/ThemePreview';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-strength';
-
-// Matches accent-blue's own hue (the identity/no-op value) — the slider
-// opens here so an untouched drag still produces a harmless brand_hue=245.
-const DEFAULT_HUE = 245;
 
 interface SetupFormProps {
   supabaseUrl: string;
@@ -32,8 +30,8 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
   const [companyName, setCompanyName] = useState('');
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
-  const [customizeHue, setCustomizeHue] = useState(false);
-  const [hue, setHue] = useState(DEFAULT_HUE);
+  const [primaryColor, setPrimaryColor] = useState<string | null>(null);
+  const [accentColor, setAccentColor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -63,7 +61,8 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
     formData.append('companyName', companyName);
     if (logo) formData.append('logo', logo);
     if (favicon) formData.append('favicon', favicon);
-    formData.append('hue', customizeHue ? String(hue) : '');
+    formData.append('primaryColor', primaryColor ?? '');
+    formData.append('accentColor', accentColor ?? '');
 
     const res = await fetch('/api/setup', { method: 'POST', body: formData });
     const body = (await res.json().catch(() => ({}))) as { error?: string; field?: string };
@@ -230,30 +229,28 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
                   />
                 </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={customizeHue} onChange={(e) => setCustomizeHue(e.target.checked)} />
-                  Personalizar color de marca (opcional, se puede cambiar después)
-                </label>
-                {customizeHue && (
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="range"
-                      min={0}
-                      max={359}
-                      value={hue}
-                      onChange={(e) => setHue(Number(e.target.value))}
-                      aria-label="Tono de color de marca"
-                      className="accent-primary flex-1"
+              <details className="group">
+                <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer text-sm font-medium underline underline-offset-2 select-none marker:content-none">
+                  Personalizar colores (opcional, se puede cambiar después)
+                </summary>
+                <div className="mt-3 flex flex-col gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <ColorField
+                      id="setup-primary-color"
+                      label="Color primario"
+                      value={primaryColor}
+                      onChange={setPrimaryColor}
                     />
-                    <div
-                      className="ring-foreground/10 size-8 shrink-0 rounded-full ring-1"
-                      style={{ backgroundColor: `oklch(0.78 0.09 ${hue})` }}
-                      aria-hidden="true"
+                    <ColorField
+                      id="setup-accent-color"
+                      label="Color de acento"
+                      value={accentColor}
+                      onChange={setAccentColor}
                     />
                   </div>
-                )}
-              </div>
+                  <ThemePreview primaryColor={primaryColor} accentColor={accentColor} />
+                </div>
+              </details>
               <Turnstile
                 siteKey={turnstileSiteKey}
                 onVerify={setCaptchaToken}

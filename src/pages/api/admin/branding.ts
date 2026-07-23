@@ -13,7 +13,13 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
   const parsed = updateBrandingSchema.safeParse({
     name: formData.get('name'),
     tokenPrefix: formData.get('tokenPrefix'),
-    hue: parseNullableNumberField(formData.get('hue')),
+    primaryColor: parseNullableStringField(formData.get('primaryColor')),
+    accentColor: parseNullableStringField(formData.get('accentColor')),
+    accentYellowColor: parseNullableStringField(formData.get('accentYellowColor')),
+    accentPinkColor: parseNullableStringField(formData.get('accentPinkColor')),
+    accentGreenColor: parseNullableStringField(formData.get('accentGreenColor')),
+    accentBlueColor: parseNullableStringField(formData.get('accentBlueColor')),
+    accentLilacColor: parseNullableStringField(formData.get('accentLilacColor')),
     radiusRem: parseNullableNumberField(formData.get('radiusRem')),
     sidebarStyle: parseNullableStringField(formData.get('sidebarStyle')),
     qrDarkColor: parseNullableStringField(formData.get('qrDarkColor')),
@@ -45,13 +51,21 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         token_prefix: parsed.data.tokenPrefix,
         ...(logoUrl && { logo_url: logoUrl }),
         ...(faviconUrl && { favicon_url: faviconUrl }),
-        ...(parsed.data.hue !== undefined && { brand_hue: parsed.data.hue }),
+        ...(parsed.data.primaryColor !== undefined && { primary_color: parsed.data.primaryColor }),
+        ...(parsed.data.accentColor !== undefined && { accent_color: parsed.data.accentColor }),
+        ...(parsed.data.accentYellowColor !== undefined && { accent_yellow_color: parsed.data.accentYellowColor }),
+        ...(parsed.data.accentPinkColor !== undefined && { accent_pink_color: parsed.data.accentPinkColor }),
+        ...(parsed.data.accentGreenColor !== undefined && { accent_green_color: parsed.data.accentGreenColor }),
+        ...(parsed.data.accentBlueColor !== undefined && { accent_blue_color: parsed.data.accentBlueColor }),
+        ...(parsed.data.accentLilacColor !== undefined && { accent_lilac_color: parsed.data.accentLilacColor }),
         ...(parsed.data.radiusRem !== undefined && { radius_rem: parsed.data.radiusRem }),
         ...(parsed.data.sidebarStyle !== undefined && { sidebar_style: parsed.data.sidebarStyle }),
         ...(parsed.data.qrDarkColor !== undefined && { qr_dark_color: parsed.data.qrDarkColor }),
       })
       .eq('id', 1)
-      .select('name, logo_url, favicon_url, token_prefix, brand_hue, radius_rem, sidebar_style, qr_dark_color')
+      .select(
+        'name, logo_url, favicon_url, token_prefix, primary_color, accent_color, accent_yellow_color, accent_pink_color, accent_green_color, accent_blue_color, accent_lilac_color, radius_rem, sidebar_style, qr_dark_color',
+      )
       .single();
 
     if (error || !data) {
@@ -66,7 +80,13 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         logoUrl: data.logo_url,
         faviconUrl: data.favicon_url,
         tokenPrefix: data.token_prefix,
-        hue: data.brand_hue,
+        primaryColor: data.primary_color,
+        accentColor: data.accent_color,
+        accentYellowColor: data.accent_yellow_color,
+        accentPinkColor: data.accent_pink_color,
+        accentGreenColor: data.accent_green_color,
+        accentBlueColor: data.accent_blue_color,
+        accentLilacColor: data.accent_lilac_color,
         radiusRem: data.radius_rem,
         sidebarStyle: data.sidebar_style,
         qrDarkColor: data.qr_dark_color,

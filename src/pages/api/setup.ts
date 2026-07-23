@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { setupSchema } from '@/lib/schemas/setup';
 import { firstErrorMessage } from '@/lib/schemas/validate';
 import { uploadBrandingAsset, BrandingAssetError } from '@/lib/storage';
-import { parseNullableNumberField } from '@/lib/schemas/form-fields';
+import { parseNullableStringField } from '@/lib/schemas/form-fields';
 
 export const POST: APIRoute = async ({ request }) => {
   const admin = createSupabaseAdminClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
@@ -23,7 +23,8 @@ export const POST: APIRoute = async ({ request }) => {
     email: formData.get('email'),
     password: formData.get('password'),
     companyName: formData.get('companyName'),
-    hue: parseNullableNumberField(formData.get('hue')),
+    primaryColor: parseNullableStringField(formData.get('primaryColor')),
+    accentColor: parseNullableStringField(formData.get('accentColor')),
   });
   if (!parsed.success) {
     const isEmailIssue = parsed.error.issues.some((issue) => issue.path[0] === 'email');
@@ -31,7 +32,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 400,
     });
   }
-  const { email, password, companyName, hue } = parsed.data;
+  const { email, password, companyName, primaryColor, accentColor } = parsed.data;
 
   const logoFile = formData.get('logo');
   const faviconFile = formData.get('favicon');
@@ -71,7 +72,8 @@ export const POST: APIRoute = async ({ request }) => {
         name: companyName,
         ...(logoUrl && { logo_url: logoUrl }),
         ...(faviconUrl && { favicon_url: faviconUrl }),
-        ...(hue !== undefined && { brand_hue: hue }),
+        ...(primaryColor !== undefined && { primary_color: primaryColor }),
+        ...(accentColor !== undefined && { accent_color: accentColor }),
       })
       .eq('id', 1);
     if (brandingError) {

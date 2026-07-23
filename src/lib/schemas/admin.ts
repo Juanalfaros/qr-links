@@ -44,6 +44,15 @@ export const deleteByIdSchema = z.object({
   id: z.string().trim().min(1, 'id is required'),
 });
 
+// Reused for every hex-color appearance field below — native
+// <input type="color"> always yields a lowercase 6-digit hex, but kept
+// lenient (case/optional leading '#' don't matter, src/lib/theme.ts's
+// hexToHue only cares about the digits) for any hand-typed value too.
+const hexColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#?[0-9a-f]{6}$/i, 'must look like #rrggbb');
+
 export const updateBrandingSchema = z.object({
   name: z.string().trim().min(1, 'name is required').max(120),
   tokenPrefix: z
@@ -55,15 +64,16 @@ export const updateBrandingSchema = z.object({
   // All nullable+optional: null clears back to the hardcoded default,
   // omitted (undefined) leaves the column untouched — lets /api/setup send
   // only a subset (or none) of these without failing validation.
-  hue: z.number().int().min(0).max(359).nullable().optional(),
+  primaryColor: hexColorSchema.nullable().optional(),
+  accentColor: hexColorSchema.nullable().optional(),
+  accentYellowColor: hexColorSchema.nullable().optional(),
+  accentPinkColor: hexColorSchema.nullable().optional(),
+  accentGreenColor: hexColorSchema.nullable().optional(),
+  accentBlueColor: hexColorSchema.nullable().optional(),
+  accentLilacColor: hexColorSchema.nullable().optional(),
   radiusRem: z.number().min(0).max(2).nullable().optional(),
   sidebarStyle: z.enum(['dark', 'brand']).nullable().optional(),
-  qrDarkColor: z
-    .string()
-    .trim()
-    .regex(/^#[0-9a-f]{6}$/i, 'qrDarkColor must look like #rrggbb')
-    .nullable()
-    .optional(),
+  qrDarkColor: hexColorSchema.nullable().optional(),
 });
 
 export const wipeDataSchema = z.object({

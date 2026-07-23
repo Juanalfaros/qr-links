@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
-import { getBranding } from '@/lib/branding';
+import { getBranding, brandingThemeProps } from '@/lib/branding';
 
 if (Astro.locals.user) {
   return Astro.redirect('/admin/dashboard');
@@ -17,9 +17,7 @@ const branding = await getBranding(Astro.locals.supabase);
   title="Iniciar sesión"
   siteName={branding.name}
   faviconUrl={branding.faviconUrl}
-  hue={branding.hue}
-  radiusRem={branding.radiusRem}
-  sidebarStyle={branding.sidebarStyle}
+  {...brandingThemeProps(branding)}
 >
   <div class="bg-background relative min-h-screen overflow-hidden">
     <div

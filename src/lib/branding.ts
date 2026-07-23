@@ -5,7 +5,13 @@ export interface Branding {
   logoUrl: string | null;
   faviconUrl: string | null;
   tokenPrefix: string;
-  hue: number | null;
+  primaryColor: string | null;
+  accentColor: string | null;
+  accentYellowColor: string | null;
+  accentPinkColor: string | null;
+  accentGreenColor: string | null;
+  accentBlueColor: string | null;
+  accentLilacColor: string | null;
   radiusRem: number | null;
   sidebarStyle: 'dark' | 'brand' | null;
   qrDarkColor: string | null;
@@ -19,11 +25,33 @@ export const DEFAULT_BRANDING: Branding = {
   logoUrl: '/logo.svg',
   faviconUrl: '/favicon.svg',
   tokenPrefix: 'api_',
-  hue: null,
+  primaryColor: null,
+  accentColor: null,
+  accentYellowColor: null,
+  accentPinkColor: null,
+  accentGreenColor: null,
+  accentBlueColor: null,
+  accentLilacColor: null,
   radiusRem: null,
   sidebarStyle: null,
   qrDarkColor: null,
 };
+
+// Spread onto <BaseLayout> so every page threads the same 9 theme-related
+// props the same way — see src/lib/theme.ts for what they do.
+export function brandingThemeProps(branding: Branding) {
+  return {
+    primaryColor: branding.primaryColor,
+    accentColor: branding.accentColor,
+    accentYellowColor: branding.accentYellowColor,
+    accentPinkColor: branding.accentPinkColor,
+    accentGreenColor: branding.accentGreenColor,
+    accentBlueColor: branding.accentBlueColor,
+    accentLilacColor: branding.accentLilacColor,
+    radiusRem: branding.radiusRem,
+    sidebarStyle: branding.sidebarStyle,
+  };
+}
 
 // Deployment-specific confirmation phrase shown/checked on the superadmin
 // "wipe all data" danger-zone action — shared between the dialog (display)
@@ -35,7 +63,9 @@ export function wipeConfirmationPhrase(companyName: string): string {
 export async function getBranding(supabase: SupabaseClient): Promise<Branding> {
   const { data } = await supabase
     .from('branding_settings')
-    .select('name, logo_url, favicon_url, token_prefix, brand_hue, radius_rem, sidebar_style, qr_dark_color')
+    .select(
+      'name, logo_url, favicon_url, token_prefix, primary_color, accent_color, accent_yellow_color, accent_pink_color, accent_green_color, accent_blue_color, accent_lilac_color, radius_rem, sidebar_style, qr_dark_color',
+    )
     .limit(1)
     .single();
 
@@ -46,7 +76,13 @@ export async function getBranding(supabase: SupabaseClient): Promise<Branding> {
     logoUrl: data.logo_url,
     faviconUrl: data.favicon_url,
     tokenPrefix: data.token_prefix,
-    hue: data.brand_hue,
+    primaryColor: data.primary_color,
+    accentColor: data.accent_color,
+    accentYellowColor: data.accent_yellow_color,
+    accentPinkColor: data.accent_pink_color,
+    accentGreenColor: data.accent_green_color,
+    accentBlueColor: data.accent_blue_color,
+    accentLilacColor: data.accent_lilac_color,
     radiusRem: data.radius_rem,
     sidebarStyle: data.sidebar_style,
     qrDarkColor: data.qr_dark_color,

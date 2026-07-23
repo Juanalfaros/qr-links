@@ -1,33 +1,26 @@
-// Turns the appearance settings a superadmin picked (brand hue, corner
-// radius, sidebar style) into a small CSS override block, injected via
-// <style set:html> in BaseLayout.astro. Every input is optional/nullable —
-// an instance that never opened the appearance panel gets '' back, which is
-// a guaranteed zero-diff from the hardcoded palette in src/styles/global.css.
+// Turns the appearance settings a superadmin picked (primary color, accent
+// color, optional per-swatch overrides, corner radius, sidebar style) into a
+// small CSS override block, injected via <style set:html> in BaseLayout.astro.
+// Every input is optional/nullable — an instance that never opened the
+// appearance panel gets '' back, a guaranteed zero-diff from the hardcoded
+// palette in src/styles/global.css.
 //
-// Rotation model: the design system is already OKLCH end to end, so instead
-// of picking a hex per token, a single brand hue (0-359) rotates every
-// existing accent/chart/sidebar-accent hue by the same delta — preserving
-// their L/C (and therefore contrast) exactly, and preserving the spacing
-// between the 5 accent families. --primary/--primary-foreground/--ring (and
-// --sidebar/--sidebar-foreground/--sidebar-accent when sidebar_style is
-// 'brand') instead adopt the chosen hue directly (not rotated) so the focus
-// ring and buttons visibly *are* the brand color rather than an arbitrary
-// offset from it.
-
-// accent-blue's light-mode hue in global.css — choosing brand_hue=245 is the
-// identity case (delta 0, byte-for-byte the same as not setting a hue).
-const ANCHOR_HUE = 245;
-
-function normalizeHue(h: number): number {
-  return ((h % 360) + 360) % 360;
-}
-
-// Pure rotation math — exported so the live preview in BrandingManager can
-// reuse the exact same formula without duplicating it or the full token
-// table below.
-export function rotateHue(originalHue: number, brandHue: number): number {
-  return normalizeHue(originalHue + (brandHue - ANCHOR_HUE));
-}
+// Model: the superadmin picks real hex colors (native <input type="color">),
+// not raw hue numbers — but only each color's *hue* is actually used. L/C
+// (lightness/chroma) always come from the hand-tuned base palette, so
+// contrast/legibility in both themes is guaranteed by construction no matter
+// what hex was picked; the live preview in BrandingManager is what tells the
+// superadmin what they'll actually get.
+//   - "Color primario" -> --primary/--primary-foreground/--ring (both
+//     themes), and --sidebar/--sidebar-foreground/--sidebar-accent when
+//     sidebar_style is 'brand'.
+//   - "Color de acento" -> rotates the 5 pastel accent families
+//     (yellow/pink/green/blue/lilac), --chart-1..5, and
+//     --sidebar-primary/-foreground/-ring, all by the same hue delta,
+//     preserving their spacing and light/dark micro-drift.
+//   - Each pastel family can be individually overridden with its own hex,
+//     which replaces only that family's --accent-{name}/-foreground pair —
+//     charts and the sidebar stay tied to the accent color for cohesion.
 
 interface Oklch {
   l: number;
@@ -39,22 +32,77 @@ function oklch({ l, c, h }: Oklch): string {
   return `oklch(${l} ${c} ${h})`;
 }
 
+function normalizeHue(h: number): number {
+  return ((h % 360) + 360) % 360;
+}
+
+function srgbToLinear(channel: number): number {
+  return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+}
+
+// sRGB hex -> OKLab -> hue (degrees). Only the hue is used anywhere in this
+// module — see the module doc comment for why. Standard Björn Ottosson OKLab
+// conversion matrices (the same ones behind oklch.com and CSS Color 4).
+export function hexToHue(hex: string): number | null {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!match) return null;
+
+  const int = parseInt(match[1], 16);
+  const r = srgbToLinear(((int >> 16) & 255) / 255);
+  const g = srgbToLinear(((int >> 8) & 255) / 255);
+  const b = srgbToLinear((int & 255) / 255);
+
+  const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+  const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+  const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+
+  const l_ = Math.cbrt(l);
+  const m_ = Math.cbrt(m);
+  const s_ = Math.cbrt(s);
+
+  const a = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_;
+  const bOk = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_;
+
+  return normalizeHue((Math.atan2(bOk, a) * 180) / Math.PI);
+}
+
+// Pure rotation math for the accent-anchored tokens (charts, sidebar
+// accents, and any pastel family without its own override).
+function rotateHue(originalHue: number, brandHue: number): number {
+  // accent-blue's light-mode hue in global.css — an accent color whose hue
+  // is 245 is the identity case (delta 0, byte-for-byte today's palette).
+  const ANCHOR_HUE = 245;
+  return normalizeHue(originalHue + (brandHue - ANCHOR_HUE));
+}
+
 type ThemeName = 'light' | 'dark';
+type AccentFamily = 'yellow' | 'pink' | 'green' | 'blue' | 'lilac';
+
+const ACCENT_FAMILIES: AccentFamily[] = ['yellow', 'pink', 'green', 'blue', 'lilac'];
 
 // Exact L/C/H triples copied from src/styles/global.css's :root/.dark blocks
 // — keep the two files in sync if that base palette ever changes.
-const ROTATE_TOKENS: Record<ThemeName, Record<string, Oklch>> = {
+const ACCENT_TOKENS: Record<ThemeName, Record<AccentFamily, { swatch: Oklch; foreground: Oklch }>> = {
   light: {
-    '--accent-yellow': { l: 0.92, c: 0.11, h: 95 },
-    '--accent-yellow-foreground': { l: 0.42, c: 0.09, h: 80 },
-    '--accent-pink': { l: 0.9, c: 0.07, h: 350 },
-    '--accent-pink-foreground': { l: 0.46, c: 0.13, h: 355 },
-    '--accent-green': { l: 0.9, c: 0.08, h: 145 },
-    '--accent-green-foreground': { l: 0.44, c: 0.09, h: 150 },
-    '--accent-blue': { l: 0.9, c: 0.06, h: 245 },
-    '--accent-blue-foreground': { l: 0.46, c: 0.11, h: 255 },
-    '--accent-lilac': { l: 0.9, c: 0.06, h: 300 },
-    '--accent-lilac-foreground': { l: 0.47, c: 0.12, h: 300 },
+    yellow: { swatch: { l: 0.92, c: 0.11, h: 95 }, foreground: { l: 0.42, c: 0.09, h: 80 } },
+    pink: { swatch: { l: 0.9, c: 0.07, h: 350 }, foreground: { l: 0.46, c: 0.13, h: 355 } },
+    green: { swatch: { l: 0.9, c: 0.08, h: 145 }, foreground: { l: 0.44, c: 0.09, h: 150 } },
+    blue: { swatch: { l: 0.9, c: 0.06, h: 245 }, foreground: { l: 0.46, c: 0.11, h: 255 } },
+    lilac: { swatch: { l: 0.9, c: 0.06, h: 300 }, foreground: { l: 0.47, c: 0.12, h: 300 } },
+  },
+  dark: {
+    yellow: { swatch: { l: 0.5, c: 0.09, h: 90 }, foreground: { l: 0.94, c: 0.06, h: 95 } },
+    pink: { swatch: { l: 0.48, c: 0.11, h: 355 }, foreground: { l: 0.93, c: 0.05, h: 350 } },
+    green: { swatch: { l: 0.47, c: 0.09, h: 150 }, foreground: { l: 0.93, c: 0.06, h: 145 } },
+    blue: { swatch: { l: 0.48, c: 0.1, h: 250 }, foreground: { l: 0.92, c: 0.05, h: 245 } },
+    lilac: { swatch: { l: 0.49, c: 0.1, h: 300 }, foreground: { l: 0.93, c: 0.05, h: 300 } },
+  },
+};
+
+// Charts + sidebar-primary/-ring: always follow the accent color's rotation,
+// never individually overridable (keeps data-viz/sidebar cohesive).
+const ACCENT_ROTATED_TOKENS: Record<ThemeName, Record<string, Oklch>> = {
+  light: {
     '--chart-1': { l: 0.82, c: 0.14, h: 95 },
     '--chart-2': { l: 0.78, c: 0.12, h: 350 },
     '--chart-3': { l: 0.78, c: 0.13, h: 145 },
@@ -65,16 +113,6 @@ const ROTATE_TOKENS: Record<ThemeName, Record<string, Oklch>> = {
     '--sidebar-ring': { l: 0.9, c: 0.07, h: 350 },
   },
   dark: {
-    '--accent-yellow': { l: 0.5, c: 0.09, h: 90 },
-    '--accent-yellow-foreground': { l: 0.94, c: 0.06, h: 95 },
-    '--accent-pink': { l: 0.48, c: 0.11, h: 355 },
-    '--accent-pink-foreground': { l: 0.93, c: 0.05, h: 350 },
-    '--accent-green': { l: 0.47, c: 0.09, h: 150 },
-    '--accent-green-foreground': { l: 0.93, c: 0.06, h: 145 },
-    '--accent-blue': { l: 0.48, c: 0.1, h: 250 },
-    '--accent-blue-foreground': { l: 0.92, c: 0.05, h: 245 },
-    '--accent-lilac': { l: 0.49, c: 0.1, h: 300 },
-    '--accent-lilac-foreground': { l: 0.93, c: 0.05, h: 300 },
     '--chart-1': { l: 0.82, c: 0.13, h: 95 },
     '--chart-2': { l: 0.76, c: 0.12, h: 350 },
     '--chart-3': { l: 0.76, c: 0.12, h: 145 },
@@ -86,8 +124,8 @@ const ROTATE_TOKENS: Record<ThemeName, Record<string, Oklch>> = {
   },
 };
 
-// Same L/C as today, hue replaced outright with the chosen brand hue.
-const DIRECT_HUE_TOKENS: Record<ThemeName, Record<string, Omit<Oklch, 'h'>>> = {
+// Same L/C as today, hue replaced outright with the primary color's hue.
+const PRIMARY_TOKENS: Record<ThemeName, Record<string, Omit<Oklch, 'h'>>> = {
   light: {
     '--primary': { l: 0.24, c: 0.012 },
     '--primary-foreground': { l: 0.98, c: 0.008 },
@@ -116,7 +154,9 @@ const SIDEBAR_BRAND_TOKENS: Record<ThemeName, Record<string, Omit<Oklch, 'h'>>> 
 };
 
 export interface ThemeInput {
-  hue?: number | null;
+  primaryColor?: string | null;
+  accentColor?: string | null;
+  accentOverrides?: Partial<Record<AccentFamily, string | null>> | null;
   radiusRem?: number | null;
   sidebarStyle?: 'dark' | 'brand' | null;
 }
@@ -130,13 +170,19 @@ function renderBlock(selector: string, declarations: string[]): string {
   return `${selector} {\n${declarations.map((d) => `  ${d}`).join('\n')}\n}\n`;
 }
 
-export function buildThemeStyle({ hue, radiusRem, sidebarStyle }: ThemeInput): string {
-  // Zod already validates these at the API boundary — this is a second,
-  // defensive normalization so a raw/out-of-range value can never reach a
-  // CSS string (matches this codebase's "never trust a raw value" pattern
-  // elsewhere, e.g. src/lib/url-validation.ts).
-  const hasHue = typeof hue === 'number' && Number.isFinite(hue);
-  const normalizedHue = hasHue ? normalizeHue(Math.round(hue as number)) : null;
+export function buildThemeStyle({
+  primaryColor,
+  accentColor,
+  accentOverrides,
+  radiusRem,
+  sidebarStyle,
+}: ThemeInput): string {
+  // Zod already validates these as `#rrggbb` at the API boundary — hexToHue
+  // returning null for anything malformed is a second, defensive layer so a
+  // raw/invalid value can never reach a CSS string (matches this codebase's
+  // "never trust a raw value" pattern elsewhere, e.g. url-validation.ts).
+  const primaryHue = primaryColor ? hexToHue(primaryColor) : null;
+  const accentHue = accentColor ? hexToHue(accentColor) : null;
   const hasRadius = typeof radiusRem === 'number' && Number.isFinite(radiusRem);
   const normalizedRadius = hasRadius ? clampRadius(radiusRem as number) : null;
   const brandSidebar = sidebarStyle === 'brand';
@@ -144,20 +190,34 @@ export function buildThemeStyle({ hue, radiusRem, sidebarStyle }: ThemeInput): s
   const lightDecls: string[] = [];
   const darkDecls: string[] = [];
 
-  if (normalizedHue !== null) {
-    for (const [theme, decls] of [
-      ['light', lightDecls],
-      ['dark', darkDecls],
-    ] as const) {
-      for (const [prop, token] of Object.entries(ROTATE_TOKENS[theme])) {
-        decls.push(`${prop}: ${oklch({ ...token, h: rotateHue(token.h, normalizedHue) })};`);
+  for (const [theme, decls] of [
+    ['light', lightDecls],
+    ['dark', darkDecls],
+  ] as const) {
+    for (const family of ACCENT_FAMILIES) {
+      const overrideHex = accentOverrides?.[family];
+      const overrideHue = overrideHex ? hexToHue(overrideHex) : null;
+      const hue =
+        overrideHue ?? (accentHue !== null ? rotateHue(ACCENT_TOKENS[theme][family].swatch.h, accentHue) : null);
+      if (hue === null) continue;
+      const { swatch, foreground } = ACCENT_TOKENS[theme][family];
+      decls.push(`--accent-${family}: ${oklch({ ...swatch, h: hue })};`);
+      decls.push(`--accent-${family}-foreground: ${oklch({ ...foreground, h: hue })};`);
+    }
+
+    if (accentHue !== null) {
+      for (const [prop, token] of Object.entries(ACCENT_ROTATED_TOKENS[theme])) {
+        decls.push(`${prop}: ${oklch({ ...token, h: rotateHue(token.h, accentHue) })};`);
       }
-      for (const [prop, token] of Object.entries(DIRECT_HUE_TOKENS[theme])) {
-        decls.push(`${prop}: ${oklch({ ...token, h: normalizedHue })};`);
+    }
+
+    if (primaryHue !== null) {
+      for (const [prop, token] of Object.entries(PRIMARY_TOKENS[theme])) {
+        decls.push(`${prop}: ${oklch({ ...token, h: primaryHue })};`);
       }
       if (brandSidebar) {
         for (const [prop, token] of Object.entries(SIDEBAR_BRAND_TOKENS[theme])) {
-          decls.push(`${prop}: ${oklch({ ...token, h: normalizedHue })};`);
+          decls.push(`${prop}: ${oklch({ ...token, h: primaryHue })};`);
         }
       }
     }
@@ -168,4 +228,72 @@ export function buildThemeStyle({ hue, radiusRem, sidebarStyle }: ThemeInput): s
   }
 
   return renderBlock(':root', lightDecls) + renderBlock('.dark', darkDecls);
+}
+
+// Precomputed swatch colors for the live mockup in BrandingManager/SetupForm
+// — the exact same math as buildThemeStyle, just returned as a plain object
+// instead of a CSS string, since the mockup styles a handful of elements
+// directly rather than going through custom properties.
+export interface PreviewPalette {
+  background: string;
+  foreground: string;
+  card: string;
+  primary: string;
+  primaryForeground: string;
+  ring: string;
+  accents: Record<AccentFamily, { swatch: string; foreground: string }>;
+}
+
+const BASE_SURFACE_TOKENS: Record<ThemeName, { background: Oklch; foreground: Oklch; card: Oklch }> = {
+  light: {
+    background: { l: 0.968, c: 0.012, h: 85 },
+    foreground: { l: 0.24, c: 0.015, h: 65 },
+    card: { l: 0.995, c: 0.005, h: 85 },
+  },
+  dark: {
+    background: { l: 0.2, c: 0.012, h: 65 },
+    foreground: { l: 0.94, c: 0.008, h: 85 },
+    card: { l: 0.255, c: 0.014, h: 65 },
+  },
+};
+
+export function previewPalette(input: ThemeInput, theme: ThemeName): PreviewPalette {
+  const primaryHue = input.primaryColor ? hexToHue(input.primaryColor) : null;
+  const accentHue = input.accentColor ? hexToHue(input.accentColor) : null;
+  const surface = BASE_SURFACE_TOKENS[theme];
+  const primaryToken = PRIMARY_TOKENS[theme];
+
+  const accents = Object.fromEntries(
+    ACCENT_FAMILIES.map((family) => {
+      const overrideHex = input.accentOverrides?.[family];
+      const overrideHue = overrideHex ? hexToHue(overrideHex) : null;
+      const hue =
+        overrideHue ??
+        (accentHue !== null
+          ? rotateHue(ACCENT_TOKENS[theme][family].swatch.h, accentHue)
+          : ACCENT_TOKENS[theme][family].swatch.h);
+      const fgHue =
+        overrideHue ??
+        (accentHue !== null
+          ? rotateHue(ACCENT_TOKENS[theme][family].foreground.h, accentHue)
+          : ACCENT_TOKENS[theme][family].foreground.h);
+      return [
+        family,
+        {
+          swatch: oklch({ ...ACCENT_TOKENS[theme][family].swatch, h: hue }),
+          foreground: oklch({ ...ACCENT_TOKENS[theme][family].foreground, h: fgHue }),
+        },
+      ];
+    }),
+  ) as Record<AccentFamily, { swatch: string; foreground: string }>;
+
+  return {
+    background: oklch(surface.background),
+    foreground: oklch(surface.foreground),
+    card: oklch(surface.card),
+    primary: oklch({ ...primaryToken['--primary'], h: primaryHue ?? surface.foreground.h }),
+    primaryForeground: oklch({ ...primaryToken['--primary-foreground'], h: primaryHue ?? surface.background.h }),
+    ring: oklch({ ...primaryToken['--ring'], h: primaryHue ?? 85 }),
+    accents,
+  };
 }

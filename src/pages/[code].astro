@@ -5,7 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { LockKeyIcon, Link04Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { siteConfig } from '@/lib/config';
-import { getBranding } from '@/lib/branding';
+import { getBranding, brandingThemeProps } from '@/lib/branding';
 import { parseUserAgent } from '@/lib/ua-parser';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -164,9 +164,7 @@ const branding = await getBranding(supabase);
   title={needsPassword ? 'Enlace protegido' : 'Vas a salir de este sitio'}
   siteName={branding.name}
   faviconUrl={branding.faviconUrl}
-  hue={branding.hue}
-  radiusRem={branding.radiusRem}
-  sidebarStyle={branding.sidebarStyle}
+  {...brandingThemeProps(branding)}
 >
   {
     !needsPassword && result.ga_tracking_id && (

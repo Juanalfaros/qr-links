@@ -7,7 +7,13 @@ interface Props {
   title: string;
   siteName?: string;
   faviconUrl?: string | null;
-  hue?: number | null;
+  primaryColor?: string | null;
+  accentColor?: string | null;
+  accentYellowColor?: string | null;
+  accentPinkColor?: string | null;
+  accentGreenColor?: string | null;
+  accentBlueColor?: string | null;
+  accentLilacColor?: string | null;
   radiusRem?: number | null;
   sidebarStyle?: 'dark' | 'brand' | null;
 }
@@ -16,12 +22,30 @@ const {
   title,
   siteName = DEFAULT_BRANDING.name,
   faviconUrl = DEFAULT_BRANDING.faviconUrl,
-  hue,
+  primaryColor,
+  accentColor,
+  accentYellowColor,
+  accentPinkColor,
+  accentGreenColor,
+  accentBlueColor,
+  accentLilacColor,
   radiusRem,
   sidebarStyle,
 } = Astro.props;
 
-const themeCss = buildThemeStyle({ hue, radiusRem, sidebarStyle });
+const themeCss = buildThemeStyle({
+  primaryColor,
+  accentColor,
+  accentOverrides: {
+    yellow: accentYellowColor,
+    pink: accentPinkColor,
+    green: accentGreenColor,
+    blue: accentBlueColor,
+    lilac: accentLilacColor,
+  },
+  radiusRem,
+  sidebarStyle,
+});
 ---
 
 <!doctype html>

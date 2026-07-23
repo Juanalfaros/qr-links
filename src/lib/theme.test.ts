@@ -1,68 +1,94 @@
 import { describe, expect, it } from 'vitest';
-import { buildThemeStyle, rotateHue } from './theme';
+import { buildThemeStyle, hexToHue, previewPalette } from './theme';
+
+describe('hexToHue', () => {
+  // Reference OKLCH values are the well-known conversions for sRGB primaries
+  // (same ones behind oklch.com / the CSS Color 4 spec discussions):
+  // #ff0000 -> oklch(62.8% 0.258 29.23), #00ff00 -> oklch(86.6% 0.295 142.5),
+  // #0000ff -> oklch(45.2% 0.313 264.05).
+  it('matches known OKLCH hue references for sRGB primaries', () => {
+    expect(hexToHue('#ff0000')).toBeCloseTo(29.23, 0);
+    expect(hexToHue('#00ff00')).toBeCloseTo(142.5, 0);
+    expect(hexToHue('#0000ff')).toBeCloseTo(264.05, 0);
+  });
+
+  it('is hue-invariant to case and an optional leading #', () => {
+    expect(hexToHue('ff0000')).toBeCloseTo(hexToHue('#FF0000')!, 5);
+  });
+
+  it('returns null for malformed input', () => {
+    expect(hexToHue('not-a-color')).toBeNull();
+    expect(hexToHue('#fff')).toBeNull();
+    expect(hexToHue('#gggggg')).toBeNull();
+  });
+
+  it('returns a number (not NaN) for achromatic colors', () => {
+    expect(hexToHue('#808080')).not.toBeNaN();
+    expect(hexToHue('#ffffff')).not.toBeNaN();
+    expect(hexToHue('#000000')).not.toBeNaN();
+  });
+});
 
 describe('buildThemeStyle', () => {
   it('returns an empty string when nothing is set', () => {
     expect(buildThemeStyle({})).toBe('');
-    expect(buildThemeStyle({ hue: null, radiusRem: null, sidebarStyle: null })).toBe('');
+    expect(buildThemeStyle({ primaryColor: null, accentColor: null, radiusRem: null, sidebarStyle: null })).toBe('');
   });
 
-  it('reproduces the base palette values exactly at the anchor hue (245)', () => {
-    // hue=245 is the anchor — rotation delta is 0, so every rotated/direct
-    // token should come out matching src/styles/global.css's own :root/.dark
-    // values verbatim, even though a CSS block is still emitted.
-    const css = buildThemeStyle({ hue: 245, sidebarStyle: 'dark' });
-    expect(css).toContain('--accent-blue: oklch(0.9 0.06 245);');
-    expect(css).toContain('--primary: oklch(0.24 0.012 245);');
-    expect(css).not.toContain('--sidebar:');
-  });
-
-  it('emits :root and .dark blocks with the rotated hue for a non-anchor hue', () => {
-    const css = buildThemeStyle({ hue: 0 });
+  it('emits :root and .dark blocks when an accent color is set', () => {
+    const css = buildThemeStyle({ accentColor: '#0000ff' });
     expect(css).toContain(':root {');
     expect(css).toContain('.dark {');
-    // accent-blue's light-mode hue is 245 (the anchor) — rotating to brand
-    // hue 0 should yield hue 0 exactly.
-    expect(css).toMatch(/--accent-blue: oklch\(0\.9 0\.06 0\);/);
-    // --primary adopts the hue directly, not rotated.
-    expect(css).toMatch(/--primary: oklch\(0\.24 0\.012 0\);/);
+    expect(css).toContain('--accent-blue:');
+    expect(css).toContain('--chart-4:');
   });
 
-  it('keeps the 5 chart hues distinct after rotating', () => {
-    const css = buildThemeStyle({ hue: 30 });
-    const hues = [...css.matchAll(/--chart-\d: oklch\([\d.]+ [\d.]+ ([\d.]+)\)/g)].map((m) => Number(m[1]));
-    expect(hues).toHaveLength(10); // 5 in :root + 5 in .dark
-    expect(new Set(hues.slice(0, 5)).size).toBe(5);
+  it('primary color only touches primary/ring, not the pastel accents', () => {
+    const css = buildThemeStyle({ primaryColor: '#ff0000' });
+    expect(css).toContain('--primary:');
+    expect(css).toContain('--ring:');
+    expect(css).not.toContain('--accent-blue:');
+  });
+
+  it('a per-family override changes only that family, not the charts', () => {
+    const overridden = buildThemeStyle({ accentColor: '#0000ff', accentOverrides: { pink: '#ff0000' } });
+    const notOverridden = buildThemeStyle({ accentColor: '#0000ff' });
+    const pinkLine = (css: string) => css.match(/--accent-pink: (oklch\([^)]+\));/)?.[1];
+    const chart2Line = (css: string) => css.match(/--chart-2: (oklch\([^)]+\));/)?.[1];
+    expect(pinkLine(overridden)).not.toBe(pinkLine(notOverridden));
+    expect(chart2Line(overridden)).toBe(chart2Line(notOverridden));
   });
 
   it('only overrides sidebar tokens when sidebarStyle is "brand"', () => {
-    expect(buildThemeStyle({ hue: 10, sidebarStyle: 'dark' })).not.toContain('--sidebar:');
-    expect(buildThemeStyle({ hue: 10, sidebarStyle: 'brand' })).toContain('--sidebar:');
+    expect(buildThemeStyle({ primaryColor: '#ff0000', sidebarStyle: 'dark' })).not.toContain('--sidebar:');
+    expect(buildThemeStyle({ primaryColor: '#ff0000', sidebarStyle: 'brand' })).toContain('--sidebar:');
   });
 
   it('emits only --radius when just radiusRem is set', () => {
     expect(buildThemeStyle({ radiusRem: 0.5 })).toBe(':root {\n  --radius: 0.5rem;\n}\n');
   });
 
-  it('clamps radiusRem to [0, 2] and rounds/normalizes hue defensively', () => {
+  it('clamps radiusRem to [0, 2]', () => {
     expect(buildThemeStyle({ radiusRem: 5 })).toContain('--radius: 2rem;');
     expect(buildThemeStyle({ radiusRem: -1 })).toContain('--radius: 0rem;');
-    expect(buildThemeStyle({ hue: 720 + 10 })).toContain(oklchHueFragment(10));
+  });
+
+  it('ignores a malformed color instead of throwing', () => {
+    expect(() => buildThemeStyle({ accentColor: 'not-a-color' })).not.toThrow();
+    expect(buildThemeStyle({ accentColor: 'not-a-color' })).toBe('');
   });
 });
 
-function oklchHueFragment(hue: number): string {
-  return ` ${hue})`;
-}
-
-describe('rotateHue', () => {
-  it('is the identity at the anchor hue (245)', () => {
-    expect(rotateHue(95, 245)).toBe(95);
-    expect(rotateHue(350, 245)).toBe(350);
+describe('previewPalette', () => {
+  it('keeps the 5 accent families visually distinct', () => {
+    const palette = previewPalette({ accentColor: '#0000ff' }, 'light');
+    const swatches = Object.values(palette.accents).map((a) => a.swatch);
+    expect(new Set(swatches).size).toBe(5);
   });
 
-  it('wraps around 360', () => {
-    expect(rotateHue(350, 245 + 20)).toBe(10);
-    expect(rotateHue(10, 245 - 20)).toBe(350);
+  it('falls back to the default palette hue when no colors are set', () => {
+    const light = previewPalette({}, 'light');
+    const dark = previewPalette({}, 'dark');
+    expect(light.background).not.toBe(dark.background);
   });
 });

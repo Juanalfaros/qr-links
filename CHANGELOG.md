@@ -3,6 +3,16 @@
 Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.3.0] - 2026-07-23
+
+### Cambiado
+
+- Personalización de apariencia rediseñada: el slider de un solo número (0-359) para el "hue de marca" se reemplaza por selectores de color reales (`<input type="color">`) para color primario y color de acento, con overrides individuales opcionales para cada uno de los 5 colores secundarios (amarillo/rosa/verde/azul/lila) y un preview en vivo mostrando claro y oscuro lado a lado. Sigue siendo OKLCH por debajo (solo se usa el matiz de cada color elegido, la luminosidad/saturación siempre vienen de la paleta ya afinada), pero ahora con feedback visual real en vez de un número sin contexto.
+
+### Corregido
+
+- El toggle de tema (claro/oscuro) no respondía al click en `/login`, `/setup`, `/forgot-password` y `/reset-password`: el contenedor centrado del formulario (sin `z-index`) tapaba el botón al pintarse después en el DOM.
+
 ## [0.2.0] - 2026-07-23
 
 ### Agregado

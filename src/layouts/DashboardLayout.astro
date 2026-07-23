@@ -8,7 +8,7 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { CommandPalette } from '@/components/layout/CommandPalette';
 import { Toaster } from '@/components/ui/sonner';
-import { getBranding } from '@/lib/branding';
+import { getBranding, brandingThemeProps } from '@/lib/branding';
 
 interface Props {
   title: string;
@@ -22,14 +22,7 @@ const user = Astro.locals.user!;
 const branding = await getBranding(Astro.locals.supabase);
 ---
 
-<BaseLayout
-  title={title}
-  siteName={branding.name}
-  faviconUrl={branding.faviconUrl}
-  hue={branding.hue}
-  radiusRem={branding.radiusRem}
-  sidebarStyle={branding.sidebarStyle}
->
+<BaseLayout title={title} siteName={branding.name} faviconUrl={branding.faviconUrl} {...brandingThemeProps(branding)}>
   <div class="bg-background flex h-screen overflow-hidden">
     <SidebarNav currentPath={Astro.url.pathname} role={user.role} name={branding.name} logoUrl={branding.logoUrl} />
     <div class="flex min-w-0 flex-1 flex-col">

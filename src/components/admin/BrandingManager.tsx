@@ -6,16 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FileDropzone } from '@/components/ui/file-dropzone';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { rotateHue } from '@/lib/theme';
+import { ColorField } from '@/components/ui/color-field';
+import { ThemePreview } from '@/components/admin/ThemePreview';
 import type { Branding } from '@/lib/branding';
 
 interface BrandingManagerProps {
   initialBranding: Branding;
 }
-
-// Only used while the hue slider is shown but the superadmin hasn't dragged
-// it yet — matches accent-blue's own hue, i.e. the identity/no-op value.
-const DEFAULT_PREVIEW_HUE = 245;
 
 const RADIUS_ITEMS = {
   default: 'Predeterminado',
@@ -31,18 +28,13 @@ const SIDEBAR_STYLE_ITEMS = {
   brand: 'Color de marca',
 };
 
-// A handful of representative tokens (light-mode L/C + base hue) used only
-// to render a live preview strip here, without duplicating global.css's
-// full token table — src/lib/theme.ts's rotateHue is the same formula
-// actually applied when the page renders.
-const PREVIEW_SWATCHES: { label: string; l: number; c: number; baseHue: number; direct: boolean }[] = [
-  { label: 'Principal', l: 0.78, c: 0.09, baseHue: 85, direct: true },
-  { label: 'Amarillo', l: 0.92, c: 0.11, baseHue: 95, direct: false },
-  { label: 'Rosa', l: 0.9, c: 0.07, baseHue: 350, direct: false },
-  { label: 'Verde', l: 0.9, c: 0.08, baseHue: 145, direct: false },
-  { label: 'Azul', l: 0.9, c: 0.06, baseHue: 245, direct: false },
-  { label: 'Lila', l: 0.9, c: 0.06, baseHue: 300, direct: false },
-];
+const ACCENT_OVERRIDE_LABELS: Record<'yellow' | 'pink' | 'green' | 'blue' | 'lilac', string> = {
+  yellow: 'Amarillo',
+  pink: 'Rosa',
+  green: 'Verde',
+  blue: 'Azul',
+  lilac: 'Lila',
+};
 
 function radiusToKey(radiusRem: number | null): string {
   return radiusRem === null ? 'default' : String(radiusRem);
@@ -59,12 +51,25 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
   const [tokenPrefix, setTokenPrefix] = useState(initialBranding.tokenPrefix);
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
-  const [customizeHue, setCustomizeHue] = useState(initialBranding.hue !== null);
-  const [hue, setHue] = useState(initialBranding.hue ?? DEFAULT_PREVIEW_HUE);
+  const [primaryColor, setPrimaryColor] = useState(initialBranding.primaryColor);
+  const [accentColor, setAccentColor] = useState(initialBranding.accentColor);
+  const [accentYellowColor, setAccentYellowColor] = useState(initialBranding.accentYellowColor);
+  const [accentPinkColor, setAccentPinkColor] = useState(initialBranding.accentPinkColor);
+  const [accentGreenColor, setAccentGreenColor] = useState(initialBranding.accentGreenColor);
+  const [accentBlueColor, setAccentBlueColor] = useState(initialBranding.accentBlueColor);
+  const [accentLilacColor, setAccentLilacColor] = useState(initialBranding.accentLilacColor);
   const [radiusRem, setRadiusRem] = useState<number | null>(initialBranding.radiusRem);
   const [sidebarStyle, setSidebarStyle] = useState<'dark' | 'brand' | null>(initialBranding.sidebarStyle);
   const [qrDarkColor, setQrDarkColor] = useState(initialBranding.qrDarkColor);
   const [loading, setLoading] = useState(false);
+
+  const accentOverrideFields: [keyof typeof ACCENT_OVERRIDE_LABELS, string | null, (v: string | null) => void][] = [
+    ['yellow', accentYellowColor, setAccentYellowColor],
+    ['pink', accentPinkColor, setAccentPinkColor],
+    ['green', accentGreenColor, setAccentGreenColor],
+    ['blue', accentBlueColor, setAccentBlueColor],
+    ['lilac', accentLilacColor, setAccentLilacColor],
+  ];
 
   const handleSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -75,7 +80,13 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
     formData.append('tokenPrefix', tokenPrefix);
     if (logo) formData.append('logo', logo);
     if (favicon) formData.append('favicon', favicon);
-    formData.append('hue', customizeHue ? String(hue) : '');
+    formData.append('primaryColor', primaryColor ?? '');
+    formData.append('accentColor', accentColor ?? '');
+    formData.append('accentYellowColor', accentYellowColor ?? '');
+    formData.append('accentPinkColor', accentPinkColor ?? '');
+    formData.append('accentGreenColor', accentGreenColor ?? '');
+    formData.append('accentBlueColor', accentBlueColor ?? '');
+    formData.append('accentLilacColor', accentLilacColor ?? '');
     formData.append('radiusRem', radiusRem === null ? '' : String(radiusRem));
     formData.append('sidebarStyle', sidebarStyle ?? '');
     formData.append('qrDarkColor', qrDarkColor ?? '');
@@ -86,10 +97,6 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
       logoUrl: string | null;
       faviconUrl: string | null;
       tokenPrefix: string;
-      hue: number | null;
-      radiusRem: number | null;
-      sidebarStyle: 'dark' | 'brand' | null;
-      qrDarkColor: string | null;
       error: string;
     }>;
 
@@ -174,40 +181,53 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
           <div className="border-border flex flex-col gap-4 border-t pt-4">
             <h3 className="text-sm font-medium">Apariencia</h3>
 
-            <div className="flex flex-col gap-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={customizeHue} onChange={(e) => setCustomizeHue(e.target.checked)} />
-                Personalizar color de marca
-              </label>
-              {customizeHue && (
-                <>
-                  <input
-                    type="range"
-                    min={0}
-                    max={359}
-                    value={hue}
-                    onChange={(e) => setHue(Number(e.target.value))}
-                    aria-label="Tono de color de marca"
-                    className="accent-primary"
-                  />
-                  <div className="flex gap-3">
-                    {PREVIEW_SWATCHES.map((swatch) => (
-                      <div key={swatch.label} className="flex flex-col items-center gap-1">
-                        <div
-                          className="ring-foreground/10 size-8 rounded-full ring-1"
-                          style={{
-                            backgroundColor: `oklch(${swatch.l} ${swatch.c} ${
-                              swatch.direct ? hue : rotateHue(swatch.baseHue, hue)
-                            })`,
-                          }}
-                        />
-                        <span className="text-muted-foreground text-[10px]">{swatch.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <ColorField
+                id="branding-primary-color"
+                label="Color primario"
+                value={primaryColor}
+                onChange={setPrimaryColor}
+              />
+              <ColorField
+                id="branding-accent-color"
+                label="Color de acento"
+                value={accentColor}
+                onChange={setAccentColor}
+              />
             </div>
+            <p className="text-muted-foreground -mt-2 text-xs">
+              El color primario tiñe botones y el foco de los campos. El color de acento tiñe los 5 colores secundarios
+              (badges, gráficos) manteniendo su contraste.
+            </p>
+
+            <details className="group">
+              <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer text-xs font-medium underline underline-offset-2 select-none marker:content-none">
+                Personalizar colores secundarios individualmente
+              </summary>
+              <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {accentOverrideFields.map(([family, value, setValue]) => (
+                  <ColorField
+                    key={family}
+                    id={`branding-accent-${family}`}
+                    label={ACCENT_OVERRIDE_LABELS[family]}
+                    value={value}
+                    onChange={setValue}
+                  />
+                ))}
+              </div>
+            </details>
+
+            <ThemePreview
+              primaryColor={primaryColor}
+              accentColor={accentColor}
+              accentOverrides={{
+                yellow: accentYellowColor,
+                pink: accentPinkColor,
+                green: accentGreenColor,
+                blue: accentBlueColor,
+                lilac: accentLilacColor,
+              }}
+            />
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="branding-radius">Redondeo de esquinas</Label>
@@ -249,25 +269,12 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="branding-qr-color">Color de QR por defecto</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="branding-qr-color"
-                  type="color"
-                  value={qrDarkColor ?? '#000000'}
-                  onChange={(e) => setQrDarkColor(e.target.value)}
-                  className="size-8 cursor-pointer rounded border"
-                />
-                <button
-                  type="button"
-                  onClick={() => setQrDarkColor(null)}
-                  className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
-                >
-                  Restablecer a negro
-                </button>
-              </div>
-            </div>
+            <ColorField
+              id="branding-qr-color"
+              label="Color de QR por defecto"
+              value={qrDarkColor}
+              onChange={setQrDarkColor}
+            />
           </div>
 
           <Button type="submit" disabled={loading} className="self-start">
