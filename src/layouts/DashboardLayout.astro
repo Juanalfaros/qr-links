@@ -3,7 +3,6 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Menu01Icon } from '@hugeicons/core-free-icons';
 import BaseLayout from './BaseLayout.astro';
 import SidebarNav from '@/components/layout/SidebarNav.astro';
-import { UserMenu } from '@/components/layout/UserMenu';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { CommandPalette } from '@/components/layout/CommandPalette';
@@ -30,32 +29,37 @@ const branding = await getBranding(Astro.locals.supabase);
   {...brandingPwaProps(branding)}
 >
   <div class="bg-background flex h-screen overflow-hidden">
-    <SidebarNav currentPath={Astro.url.pathname} role={user.role} name={branding.name} logoUrl={branding.logoUrl} />
+    <SidebarNav
+      currentPath={Astro.url.pathname}
+      role={user.role}
+      name={branding.name}
+      logoUrl={branding.logoUrl}
+      email={user.email}
+    />
     <div class="flex min-w-0 flex-1 flex-col">
-      <header class="flex h-16 items-center justify-between gap-3 px-4 md:px-8">
-        <div class="flex min-w-0 items-center gap-3">
+      <header class="flex h-14 shrink-0 items-center justify-between gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 md:px-8">
+        <div class="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
             id="sidebar-toggle"
             type="button"
-            class="text-muted-foreground hover:bg-accent rounded-xl p-1.5 md:hidden"
+            class="text-muted-foreground hover:bg-accent shrink-0 rounded-xl p-1.5 md:hidden"
             aria-label="Abrir menú"
           >
             <HugeiconsIcon icon={Menu01Icon} size={20} />
           </button>
-          <h1 class="font-heading truncate text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
+          <h1 class="font-heading truncate text-base font-semibold tracking-tight sm:text-lg md:text-xl">{title}</h1>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <CommandPalette client:load isSuperadmin={user.role === 'superadmin'} />
           <div
             class="bg-card ring-foreground/10 flex items-center gap-1 rounded-full p-1 shadow-[var(--shadow-card)] ring-1"
           >
             <NotificationBell client:load />
             <ThemeToggle client:load />
-            <UserMenu client:load email={user.email} />
           </div>
         </div>
       </header>
-      <main class="flex-1 overflow-auto px-4 pb-6 md:px-8 md:pb-8">
+      <main class="flex-1 overflow-auto px-3 pb-4 sm:px-4 sm:pb-6 md:px-8 md:pb-8">
         <slot />
       </main>
     </div>

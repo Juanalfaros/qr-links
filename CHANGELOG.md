@@ -3,6 +3,19 @@
 Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.4.1] - 2026-07-23
+
+### Cambiado
+
+- El sidebar del panel autenticado ahora tiene header, cuerpo con scroll y footer como regiones
+  fijas independientes (antes era un solo bloque scrolleable, sin footer) — el footer muestra la
+  cuenta actual (avatar, email, rol) con acceso directo a cerrar sesión, reemplazando el ícono de
+  cuenta que antes vivía en el header del área de contenido.
+- El header del área de contenido queda más liviano (búsqueda, notificaciones y tema) y con
+  paddings/tamaños de texto responsivos más finos para pantallas angostas.
+- El drawer del sidebar en mobile limita su ancho a `85vw` para no taparse completo en pantallas
+  muy chicas.
+
 ## [0.4.0] - 2026-07-23
 
 ### Agregado
