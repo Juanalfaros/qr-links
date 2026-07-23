@@ -32,15 +32,32 @@ export default defineConfig(
     // or Vite), so they need the DOM globals declared by hand instead of
     // relying on the tsconfig-driven lib types the rest of the app gets.
     files: ['public/**/*.js'],
+    ignores: ['public/sw.js'],
     languageOptions: {
       globals: { document: 'readonly', window: 'readonly' },
+    },
+  },
+  {
+    // Service worker context: no `document`/`window` (there's no DOM), but
+    // its own globals instead.
+    files: ['public/sw.js'],
+    languageOptions: {
+      globals: { self: 'readonly', caches: 'readonly', fetch: 'readonly', URL: 'readonly' },
     },
   },
   {
     // Standalone Node CLI scripts (run via `node`, not bundled by Astro/Vite).
     files: ['scripts/**/*.mjs'],
     languageOptions: {
-      globals: { process: 'readonly', console: 'readonly' },
+      globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly' },
+    },
+  },
+  {
+    // generate-default-pwa-icons.mjs's page.evaluate() callback runs inside
+    // a real browser (Playwright), not Node — needs DOM/browser globals too.
+    files: ['scripts/generate-default-pwa-icons.mjs'],
+    languageOptions: {
+      globals: { document: 'readonly', Image: 'readonly', Blob: 'readonly', URL: 'readonly' },
     },
   },
 );

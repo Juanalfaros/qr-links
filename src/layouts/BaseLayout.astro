@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import { DEFAULT_BRANDING } from '@/lib/branding';
-import { buildThemeStyle } from '@/lib/theme';
+import { buildThemeStyle, defaultPrimaryHex } from '@/lib/theme';
 
 interface Props {
   title: string;
@@ -16,6 +16,9 @@ interface Props {
   accentLilacColor?: string | null;
   radiusRem?: number | null;
   sidebarStyle?: 'dark' | 'brand' | null;
+  pwaIcon192Url?: string;
+  pwaIcon512Url?: string;
+  pwaIcon512MaskableUrl?: string;
 }
 
 const {
@@ -31,7 +34,10 @@ const {
   accentLilacColor,
   radiusRem,
   sidebarStyle,
+  pwaIcon192Url = DEFAULT_BRANDING.pwaIcon192Url!,
 } = Astro.props;
+
+const themeColor = primaryColor ?? defaultPrimaryHex();
 
 const themeCss = buildThemeStyle({
   primaryColor,
@@ -55,6 +61,11 @@ const themeCss = buildThemeStyle({
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {faviconUrl && <link rel="icon" href={faviconUrl} />}
     <title>{title} · {siteName}</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content={themeColor} />
+    <link rel="apple-touch-icon" href={pwaIcon192Url} />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <script is:inline>
       // Runs before paint to avoid a flash of the wrong theme. Kept out of the
       // bundled/deferred script pipeline (is:inline) precisely so it blocks
@@ -64,6 +75,14 @@ const themeCss = buildThemeStyle({
         const isDark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
         document.documentElement.classList.toggle('dark', isDark);
       })();
+    </script>
+    <script is:inline>
+      // Only caches static, content-hashed assets (see public/sw.js) — never
+      // intercepts any dynamic/authenticated route, so this is safe to
+      // register unconditionally on every page.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+      }
     </script>
     {themeCss && <style set:html={themeCss} />}
   </head>

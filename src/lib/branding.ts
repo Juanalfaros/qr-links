@@ -15,6 +15,9 @@ export interface Branding {
   radiusRem: number | null;
   sidebarStyle: 'dark' | 'brand' | null;
   qrDarkColor: string | null;
+  pwaIcon192Url: string | null;
+  pwaIcon512Url: string | null;
+  pwaIcon512MaskableUrl: string | null;
 }
 
 // Generic fallback — used before /setup has run, if the branding_settings
@@ -35,6 +38,9 @@ export const DEFAULT_BRANDING: Branding = {
   radiusRem: null,
   sidebarStyle: null,
   qrDarkColor: null,
+  pwaIcon192Url: '/icons/icon-192.png',
+  pwaIcon512Url: '/icons/icon-512.png',
+  pwaIcon512MaskableUrl: '/icons/icon-512-maskable.png',
 };
 
 // Spread onto <BaseLayout> so every page threads the same 9 theme-related
@@ -53,6 +59,21 @@ export function brandingThemeProps(branding: Branding) {
   };
 }
 
+// Resolved (never-null) icon URLs for the manifest route and BaseLayout's
+// apple-touch-icon — falls back to the static defaults in public/icons/
+// exactly like siteName/faviconUrl already do in BaseLayout's own props.
+export function brandingPwaProps(branding: Branding): {
+  pwaIcon192Url: string;
+  pwaIcon512Url: string;
+  pwaIcon512MaskableUrl: string;
+} {
+  return {
+    pwaIcon192Url: branding.pwaIcon192Url ?? DEFAULT_BRANDING.pwaIcon192Url!,
+    pwaIcon512Url: branding.pwaIcon512Url ?? DEFAULT_BRANDING.pwaIcon512Url!,
+    pwaIcon512MaskableUrl: branding.pwaIcon512MaskableUrl ?? DEFAULT_BRANDING.pwaIcon512MaskableUrl!,
+  };
+}
+
 // Deployment-specific confirmation phrase shown/checked on the superadmin
 // "wipe all data" danger-zone action — shared between the dialog (display)
 // and the API route (server-side re-validation), so they can never drift.
@@ -64,7 +85,7 @@ export async function getBranding(supabase: SupabaseClient): Promise<Branding> {
   const { data } = await supabase
     .from('branding_settings')
     .select(
-      'name, logo_url, favicon_url, token_prefix, primary_color, accent_color, accent_yellow_color, accent_pink_color, accent_green_color, accent_blue_color, accent_lilac_color, radius_rem, sidebar_style, qr_dark_color',
+      'name, logo_url, favicon_url, token_prefix, primary_color, accent_color, accent_yellow_color, accent_pink_color, accent_green_color, accent_blue_color, accent_lilac_color, radius_rem, sidebar_style, qr_dark_color, pwa_icon_192_url, pwa_icon_512_url, pwa_icon_512_maskable_url',
     )
     .limit(1)
     .single();
@@ -86,5 +107,8 @@ export async function getBranding(supabase: SupabaseClient): Promise<Branding> {
     radiusRem: data.radius_rem,
     sidebarStyle: data.sidebar_style,
     qrDarkColor: data.qr_dark_color,
+    pwaIcon192Url: data.pwa_icon_192_url,
+    pwaIcon512Url: data.pwa_icon_512_url,
+    pwaIcon512MaskableUrl: data.pwa_icon_512_maskable_url,
   };
 }

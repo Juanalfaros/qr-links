@@ -80,7 +80,7 @@ function linearToSrgb(channel: number): number {
 // today's actual default" swatch in a color picker before it's customized —
 // never fed back into hexToHue (that would just round-trip losslessly on
 // hue but isn't needed).
-function oklchToHex({ l, c, h }: Oklch): string {
+export function oklchToHex({ l, c, h }: Oklch): string {
   const hRad = (h * Math.PI) / 180;
   const a = c * Math.cos(hRad);
   const b = c * Math.sin(hRad);
@@ -369,6 +369,15 @@ export function defaultAccentHex(): string {
 
 export function defaultAccentFamilyHex(family: AccentFamily): string {
   return oklchToHex(ACCENT_TOKENS.light[family].swatch);
+}
+
+// background_color for the web app manifest (src/pages/manifest.webmanifest.ts)
+// — browsers use this for the splash screen shown while a PWA launches.
+// Not customizable via branding today, so this is just the light-mode
+// --background value from src/styles/global.css, as a hex (manifest colors
+// need broad-compatibility hex, not oklch()).
+export function defaultBackgroundHex(): string {
+  return oklchToHex({ l: 0.968, c: 0.012, h: 85 });
 }
 
 export type { AccentFamily };

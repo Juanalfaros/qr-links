@@ -3,6 +3,22 @@
 Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.4.0] - 2026-07-23
+
+### Agregado
+
+- La app es instalable como PWA: manifest dinámico (`/manifest.webmanifest`) que refleja el
+  nombre/colores/íconos de cada instancia (mismo principio que favicon/título, que ya eran
+  dinámicos), `theme-color`/`apple-touch-icon`/meta tags de iOS en `BaseLayout`, y un service
+  worker mínimo (`public/sw.js`, sin Workbox) que cachea solo assets estáticos con hash de
+  contenido — nunca rutas dinámicas/autenticadas, ya que casi toda esta app depende de
+  verificación server-side en vivo en cada request.
+- Íconos de PWA (192×192, 512×512, y una variante "maskable" para Android) generados
+  automáticamente con `<canvas>` en el navegador a partir del logo subido, sin ningún
+  procesamiento de imágenes en el servidor (Cloudflare Workers no lo soporta sin un servicio de
+  pago). El panel de superadmin permite además subir un ícono dedicado por separado si se
+  prefiere una imagen distinta al logo.
+
 ## [0.3.1] - 2026-07-23
 
 ### Cambiado

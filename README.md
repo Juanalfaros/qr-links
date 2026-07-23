@@ -18,6 +18,10 @@ Acortador de enlaces dinámico y generador de códigos QR corporativo, multiusua
 - Tokens de API personales para integraciones externas, con prefijo configurable por instancia.
 - Dark/light mode con persistencia.
 - Layout responsivo (sidebar colapsa a drawer en móvil, tablas colapsan a cards).
+- Instalable como PWA: manifest dinámico (nombre/colores/íconos reflejan el branding de cada
+  instancia), íconos generados automáticamente desde el logo (recorte/relleno con `<canvas>` en el
+  navegador, sin procesamiento de imágenes en el servidor) y un service worker mínimo que cachea
+  solo assets estáticos — nunca rutas dinámicas/autenticadas.
 
 ## Requisitos
 

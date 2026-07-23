@@ -36,11 +36,23 @@ export const POST: APIRoute = async ({ request }) => {
 
   const logoFile = formData.get('logo');
   const faviconFile = formData.get('favicon');
+  const pwaIcon192File = formData.get('pwaIcon192');
+  const pwaIcon512File = formData.get('pwaIcon512');
+  const pwaIcon512MaskableFile = formData.get('pwaIcon512Maskable');
 
   try {
-    const [logoUrl, faviconUrl] = await Promise.all([
+    const [logoUrl, faviconUrl, pwaIcon192Url, pwaIcon512Url, pwaIcon512MaskableUrl] = await Promise.all([
       logoFile instanceof File ? uploadBrandingAsset(admin, 'logo', logoFile) : Promise.resolve(null),
       faviconFile instanceof File ? uploadBrandingAsset(admin, 'favicon', faviconFile) : Promise.resolve(null),
+      pwaIcon192File instanceof File
+        ? uploadBrandingAsset(admin, 'pwa-icon-192', pwaIcon192File)
+        : Promise.resolve(null),
+      pwaIcon512File instanceof File
+        ? uploadBrandingAsset(admin, 'pwa-icon-512', pwaIcon512File)
+        : Promise.resolve(null),
+      pwaIcon512MaskableFile instanceof File
+        ? uploadBrandingAsset(admin, 'pwa-icon-512-maskable', pwaIcon512MaskableFile)
+        : Promise.resolve(null),
     ]);
 
     const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -72,6 +84,9 @@ export const POST: APIRoute = async ({ request }) => {
         name: companyName,
         ...(logoUrl && { logo_url: logoUrl }),
         ...(faviconUrl && { favicon_url: faviconUrl }),
+        ...(pwaIcon192Url && { pwa_icon_192_url: pwaIcon192Url }),
+        ...(pwaIcon512Url && { pwa_icon_512_url: pwaIcon512Url }),
+        ...(pwaIcon512MaskableUrl && { pwa_icon_512_maskable_url: pwaIcon512MaskableUrl }),
         ...(primaryColor !== undefined && { primary_color: primaryColor }),
         ...(accentColor !== undefined && { accent_color: accentColor }),
       })

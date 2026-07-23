@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
-import { getBranding, brandingThemeProps } from '@/lib/branding';
+import { getBranding, brandingThemeProps, brandingPwaProps } from '@/lib/branding';
 
 if (Astro.locals.user) {
   return Astro.redirect('/admin/dashboard');
@@ -18,6 +18,7 @@ const branding = await getBranding(Astro.locals.supabase);
   siteName={branding.name}
   faviconUrl={branding.faviconUrl}
   {...brandingThemeProps(branding)}
+  {...brandingPwaProps(branding)}
 >
   <div class="bg-background relative min-h-screen overflow-hidden">
     <div

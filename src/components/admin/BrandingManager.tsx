@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ColorField } from '@/components/ui/color-field';
 import { ThemePreview } from '@/components/admin/ThemePreview';
 import { defaultPrimaryHex, defaultAccentHex, defaultAccentFamilyHex } from '@/lib/theme';
+import { generatePwaIcons } from '@/lib/pwa-icon';
 import type { Branding } from '@/lib/branding';
 
 interface BrandingManagerProps {
@@ -52,6 +53,7 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
   const [tokenPrefix, setTokenPrefix] = useState(initialBranding.tokenPrefix);
   const [logo, setLogo] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
+  const [pwaIcon, setPwaIcon] = useState<File | null>(null);
   const [primaryColor, setPrimaryColor] = useState(initialBranding.primaryColor);
   const [accentColor, setAccentColor] = useState(initialBranding.accentColor);
   const [accentYellowColor, setAccentYellowColor] = useState(initialBranding.accentYellowColor);
@@ -81,6 +83,25 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
     formData.append('tokenPrefix', tokenPrefix);
     if (logo) formData.append('logo', logo);
     if (favicon) formData.append('favicon', favicon);
+
+    // Derive the PWA manifest icons from whichever image was just uploaded —
+    // the dedicated override if given, otherwise the logo. If neither was
+    // touched in this submit, existing icons stay as they are (same
+    // "only re-upload what changed" convention as logo/favicon above).
+    const iconSource = pwaIcon ?? logo ?? null;
+    if (iconSource) {
+      try {
+        const { icon192, icon512, icon512Maskable } = await generatePwaIcons(iconSource);
+        formData.append('pwaIcon192', icon192, 'icon-192.png');
+        formData.append('pwaIcon512', icon512, 'icon-512.png');
+        formData.append('pwaIcon512Maskable', icon512Maskable, 'icon-512-maskable.png');
+      } catch {
+        toast.error('No se pudo generar el ícono de PWA a partir de la imagen');
+        setLoading(false);
+        return;
+      }
+    }
+
     formData.append('primaryColor', primaryColor ?? '');
     formData.append('accentColor', accentColor ?? '');
     formData.append('accentYellowColor', accentYellowColor ?? '');
@@ -112,6 +133,7 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
     setTokenPrefix(body.tokenPrefix ?? tokenPrefix);
     setLogo(null);
     setFavicon(null);
+    setPwaIcon(null);
     setLoading(false);
     toast.success('Branding actualizado. Recargá la página para ver los cambios de apariencia.');
   };
@@ -178,6 +200,26 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
               />
             </div>
           </div>
+
+          <details className="group">
+            <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer text-xs font-medium underline underline-offset-2 select-none marker:content-none">
+              Ícono de PWA dedicado (opcional)
+            </summary>
+            <div className="mt-3 flex flex-col gap-2">
+              <p className="text-muted-foreground text-xs">
+                Se genera automáticamente desde el logo al guardar. Subí uno acá solo si querés usar una imagen distinta
+                específicamente para el ícono instalable.
+              </p>
+              <FileDropzone
+                id="branding-pwa-icon"
+                accept="image/png,image/jpeg"
+                file={pwaIcon}
+                onFileChange={setPwaIcon}
+                validateAsBrandingImage
+                hint="Idealmente cuadrada — se recorta y ajusta automáticamente"
+              />
+            </div>
+          </details>
 
           <div className="border-border flex flex-col gap-4 border-t pt-4">
             <h3 className="text-sm font-medium">Apariencia</h3>

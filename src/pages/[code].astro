@@ -5,7 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { LockKeyIcon, Link04Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { siteConfig } from '@/lib/config';
-import { getBranding, brandingThemeProps } from '@/lib/branding';
+import { getBranding, brandingThemeProps, brandingPwaProps } from '@/lib/branding';
 import { parseUserAgent } from '@/lib/ua-parser';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -165,6 +165,7 @@ const branding = await getBranding(supabase);
   siteName={branding.name}
   faviconUrl={branding.faviconUrl}
   {...brandingThemeProps(branding)}
+  {...brandingPwaProps(branding)}
 >
   {
     !needsPassword && result.ga_tracking_id && (

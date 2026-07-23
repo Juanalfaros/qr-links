@@ -12,6 +12,7 @@ import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 import { PasswordStrengthMeter } from '@/components/auth/PasswordStrengthMeter';
 import { ThemePreview } from '@/components/admin/ThemePreview';
 import { defaultPrimaryHex, defaultAccentHex } from '@/lib/theme';
+import { generatePwaIcons } from '@/lib/pwa-icon';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-strength';
 
@@ -62,6 +63,22 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
     formData.append('companyName', companyName);
     if (logo) formData.append('logo', logo);
     if (favicon) formData.append('favicon', favicon);
+
+    // Auto-derive the PWA manifest icons from the logo — no dedicated
+    // override here, kept minimal like the rest of this wizard; a
+    // superadmin can upload a distinct one later from the branding panel.
+    if (logo) {
+      try {
+        const { icon192, icon512, icon512Maskable } = await generatePwaIcons(logo);
+        formData.append('pwaIcon192', icon192, 'icon-192.png');
+        formData.append('pwaIcon512', icon512, 'icon-512.png');
+        formData.append('pwaIcon512Maskable', icon512Maskable, 'icon-512-maskable.png');
+      } catch {
+        // Non-fatal — setup still completes, it just falls back to the
+        // static default PWA icons.
+      }
+    }
+
     formData.append('primaryColor', primaryColor ?? '');
     formData.append('accentColor', accentColor ?? '');
 

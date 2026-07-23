@@ -30,6 +30,9 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 
   const logoFile = formData.get('logo');
   const faviconFile = formData.get('favicon');
+  const pwaIcon192File = formData.get('pwaIcon192');
+  const pwaIcon512File = formData.get('pwaIcon512');
+  const pwaIcon512MaskableFile = formData.get('pwaIcon512Maskable');
 
   // RLS-scoped client, not the admin/service-role one — this route always
   // runs with a real superadmin session, same convention as
@@ -37,10 +40,19 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
   // branding_bucket_*_superadmin (storage RLS) as the actual enforcement,
   // the role check above is defense-in-depth.
   try {
-    const [logoUrl, faviconUrl] = await Promise.all([
+    const [logoUrl, faviconUrl, pwaIcon192Url, pwaIcon512Url, pwaIcon512MaskableUrl] = await Promise.all([
       logoFile instanceof File ? uploadBrandingAsset(locals.supabase, 'logo', logoFile) : Promise.resolve(null),
       faviconFile instanceof File
         ? uploadBrandingAsset(locals.supabase, 'favicon', faviconFile)
+        : Promise.resolve(null),
+      pwaIcon192File instanceof File
+        ? uploadBrandingAsset(locals.supabase, 'pwa-icon-192', pwaIcon192File)
+        : Promise.resolve(null),
+      pwaIcon512File instanceof File
+        ? uploadBrandingAsset(locals.supabase, 'pwa-icon-512', pwaIcon512File)
+        : Promise.resolve(null),
+      pwaIcon512MaskableFile instanceof File
+        ? uploadBrandingAsset(locals.supabase, 'pwa-icon-512-maskable', pwaIcon512MaskableFile)
         : Promise.resolve(null),
     ]);
 
@@ -51,6 +63,9 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         token_prefix: parsed.data.tokenPrefix,
         ...(logoUrl && { logo_url: logoUrl }),
         ...(faviconUrl && { favicon_url: faviconUrl }),
+        ...(pwaIcon192Url && { pwa_icon_192_url: pwaIcon192Url }),
+        ...(pwaIcon512Url && { pwa_icon_512_url: pwaIcon512Url }),
+        ...(pwaIcon512MaskableUrl && { pwa_icon_512_maskable_url: pwaIcon512MaskableUrl }),
         ...(parsed.data.primaryColor !== undefined && { primary_color: parsed.data.primaryColor }),
         ...(parsed.data.accentColor !== undefined && { accent_color: parsed.data.accentColor }),
         ...(parsed.data.accentYellowColor !== undefined && { accent_yellow_color: parsed.data.accentYellowColor }),
@@ -64,7 +79,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       })
       .eq('id', 1)
       .select(
-        'name, logo_url, favicon_url, token_prefix, primary_color, accent_color, accent_yellow_color, accent_pink_color, accent_green_color, accent_blue_color, accent_lilac_color, radius_rem, sidebar_style, qr_dark_color',
+        'name, logo_url, favicon_url, token_prefix, primary_color, accent_color, accent_yellow_color, accent_pink_color, accent_green_color, accent_blue_color, accent_lilac_color, radius_rem, sidebar_style, qr_dark_color, pwa_icon_192_url, pwa_icon_512_url, pwa_icon_512_maskable_url',
       )
       .single();
 
@@ -90,6 +105,9 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         radiusRem: data.radius_rem,
         sidebarStyle: data.sidebar_style,
         qrDarkColor: data.qr_dark_color,
+        pwaIcon192Url: data.pwa_icon_192_url,
+        pwaIcon512Url: data.pwa_icon_512_url,
+        pwaIcon512MaskableUrl: data.pwa_icon_512_maskable_url,
       }),
       { status: 200 },
     );

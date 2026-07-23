@@ -24,7 +24,7 @@ export class BrandingAssetError extends Error {}
 // not worth cleanup logic for a single-row, low-frequency setting.
 export async function uploadBrandingAsset(
   supabase: SupabaseClient,
-  slot: 'logo' | 'favicon',
+  slot: 'logo' | 'favicon' | 'pwa-icon-192' | 'pwa-icon-512' | 'pwa-icon-512-maskable',
   file: File,
 ): Promise<string> {
   const validation = validateBrandingFile(file);
