@@ -14,13 +14,17 @@
 //   - "Color primario" -> --primary/--primary-foreground/--ring (both
 //     themes), and --sidebar/--sidebar-foreground/--sidebar-accent when
 //     sidebar_style is 'brand'.
-//   - "Color de acento" -> rotates the 5 pastel accent families
-//     (yellow/pink/green/blue/lilac), --chart-1..5, and
-//     --sidebar-primary/-foreground/-ring, all by the same hue delta,
-//     preserving their spacing and light/dark micro-drift.
-//   - Each pastel family can be individually overridden with its own hex,
-//     which replaces only that family's --accent-{name}/-foreground pair —
-//     charts and the sidebar stay tied to the accent color for cohesion.
+//   - "Color de acento" -> rotates only the cohesive, unnamed groups:
+//     --chart-1..5 and --sidebar-primary/-foreground/-ring, all by the same
+//     hue delta, preserving their spacing. It deliberately does NOT touch
+//     the 5 *named* pastel badges (yellow/pink/green/blue/lilac) — rotating
+//     them by an arbitrary delta would make a badge labeled "Azul" render
+//     red (whatever hue happens to land there), which is confusing
+//     regardless of the math being internally consistent. A UI element
+//     whose label promises a color must render that color.
+//   - Each of the 5 named pastel badges keeps its true default color unless
+//     individually overridden with its own hex — never derived from the
+//     accent color.
 
 interface Oklch {
   l: number;
@@ -65,6 +69,48 @@ export function hexToHue(hex: string): number | null {
 
   return normalizeHue((Math.atan2(bOk, a) * 180) / Math.PI);
 }
+
+function linearToSrgb(channel: number): number {
+  const clamped = Math.min(1, Math.max(0, channel));
+  return clamped <= 0.0031308 ? clamped * 12.92 : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055;
+}
+
+// Inverse of hexToHue — OKLCH -> OKLab -> linear RGB -> sRGB hex. Same
+// Björn Ottosson matrices, inverted. Used only to show an accurate "here's
+// today's actual default" swatch in a color picker before it's customized —
+// never fed back into hexToHue (that would just round-trip losslessly on
+// hue but isn't needed).
+function oklchToHex({ l, c, h }: Oklch): string {
+  const hRad = (h * Math.PI) / 180;
+  const a = c * Math.cos(hRad);
+  const b = c * Math.sin(hRad);
+
+  const l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = l - 0.0894841775 * a - 1.291485548 * b;
+
+  const lCubed = l_ ** 3;
+  const mCubed = m_ ** 3;
+  const sCubed = s_ ** 3;
+
+  const r = 4.0767416621 * lCubed - 3.3077115913 * mCubed + 0.2309699292 * sCubed;
+  const g = -1.2684380046 * lCubed + 2.6097574011 * mCubed - 0.3413193965 * sCubed;
+  const bChannel = -0.0041960863 * lCubed - 0.7034186147 * mCubed + 1.707614701 * sCubed;
+
+  const toHexByte = (channel: number) =>
+    Math.round(linearToSrgb(channel) * 255)
+      .toString(16)
+      .padStart(2, '0');
+
+  return `#${toHexByte(r)}${toHexByte(g)}${toHexByte(bChannel)}`;
+}
+
+// Hues global.css actually hardcodes today for --primary (65) and the
+// anchor used for accent rotation (245, accent-blue's own hue) — used only
+// to render an accurate "this is today's default" swatch in a picker before
+// it's been customized.
+const DEFAULT_PRIMARY_HUE = 65;
+const DEFAULT_ACCENT_HUE = 245;
 
 // Pure rotation math for the accent-anchored tokens (charts, sidebar
 // accents, and any pastel family without its own override).
@@ -194,15 +240,17 @@ export function buildThemeStyle({
     ['light', lightDecls],
     ['dark', darkDecls],
   ] as const) {
+    // Named badges never follow the accent color's rotation — only an
+    // explicit per-family override changes one. See the module doc comment
+    // for why: a badge labeled "Azul" rendering red would be confusing no
+    // matter how internally consistent the rotation math is.
     for (const family of ACCENT_FAMILIES) {
       const overrideHex = accentOverrides?.[family];
       const overrideHue = overrideHex ? hexToHue(overrideHex) : null;
-      const hue =
-        overrideHue ?? (accentHue !== null ? rotateHue(ACCENT_TOKENS[theme][family].swatch.h, accentHue) : null);
-      if (hue === null) continue;
+      if (overrideHue === null) continue;
       const { swatch, foreground } = ACCENT_TOKENS[theme][family];
-      decls.push(`--accent-${family}: ${oklch({ ...swatch, h: hue })};`);
-      decls.push(`--accent-${family}-foreground: ${oklch({ ...foreground, h: hue })};`);
+      decls.push(`--accent-${family}: ${oklch({ ...swatch, h: overrideHue })};`);
+      decls.push(`--accent-${family}-foreground: ${oklch({ ...foreground, h: overrideHue })};`);
     }
 
     if (accentHue !== null) {
@@ -242,7 +290,13 @@ export interface PreviewPalette {
   primaryForeground: string;
   ring: string;
   accents: Record<AccentFamily, { swatch: string; foreground: string }>;
+  sidebar: string;
+  sidebarForeground: string;
+  sidebarAccent: string;
+  radiusRem: number;
 }
+
+const DEFAULT_RADIUS_REM = 0.9;
 
 const BASE_SURFACE_TOKENS: Record<ThemeName, { background: Oklch; foreground: Oklch; card: Oklch }> = {
   light: {
@@ -259,24 +313,18 @@ const BASE_SURFACE_TOKENS: Record<ThemeName, { background: Oklch; foreground: Ok
 
 export function previewPalette(input: ThemeInput, theme: ThemeName): PreviewPalette {
   const primaryHue = input.primaryColor ? hexToHue(input.primaryColor) : null;
-  const accentHue = input.accentColor ? hexToHue(input.accentColor) : null;
   const surface = BASE_SURFACE_TOKENS[theme];
   const primaryToken = PRIMARY_TOKENS[theme];
+  const brandSidebar = input.sidebarStyle === 'brand';
 
+  // Named badges: true default color unless individually overridden — never
+  // derived from accentColor. See buildThemeStyle's matching logic.
   const accents = Object.fromEntries(
     ACCENT_FAMILIES.map((family) => {
       const overrideHex = input.accentOverrides?.[family];
       const overrideHue = overrideHex ? hexToHue(overrideHex) : null;
-      const hue =
-        overrideHue ??
-        (accentHue !== null
-          ? rotateHue(ACCENT_TOKENS[theme][family].swatch.h, accentHue)
-          : ACCENT_TOKENS[theme][family].swatch.h);
-      const fgHue =
-        overrideHue ??
-        (accentHue !== null
-          ? rotateHue(ACCENT_TOKENS[theme][family].foreground.h, accentHue)
-          : ACCENT_TOKENS[theme][family].foreground.h);
+      const hue = overrideHue ?? ACCENT_TOKENS[theme][family].swatch.h;
+      const fgHue = overrideHue ?? ACCENT_TOKENS[theme][family].foreground.h;
       return [
         family,
         {
@@ -287,13 +335,40 @@ export function previewPalette(input: ThemeInput, theme: ThemeName): PreviewPale
     }),
   ) as Record<AccentFamily, { swatch: string; foreground: string }>;
 
+  const sidebarHue = brandSidebar && primaryHue !== null ? primaryHue : DEFAULT_PRIMARY_HUE;
+  const sidebarToken = SIDEBAR_BRAND_TOKENS[theme];
+
+  const hasRadius = typeof input.radiusRem === 'number' && Number.isFinite(input.radiusRem);
+  const radiusRem = hasRadius ? clampRadius(input.radiusRem as number) : DEFAULT_RADIUS_REM;
+
   return {
     background: oklch(surface.background),
     foreground: oklch(surface.foreground),
     card: oklch(surface.card),
-    primary: oklch({ ...primaryToken['--primary'], h: primaryHue ?? surface.foreground.h }),
-    primaryForeground: oklch({ ...primaryToken['--primary-foreground'], h: primaryHue ?? surface.background.h }),
-    ring: oklch({ ...primaryToken['--ring'], h: primaryHue ?? 85 }),
+    primary: oklch({ ...primaryToken['--primary'], h: primaryHue ?? DEFAULT_PRIMARY_HUE }),
+    primaryForeground: oklch({ ...primaryToken['--primary-foreground'], h: primaryHue ?? DEFAULT_PRIMARY_HUE }),
+    ring: oklch({ ...primaryToken['--ring'], h: primaryHue ?? DEFAULT_PRIMARY_HUE }),
     accents,
+    sidebar: oklch({ ...sidebarToken['--sidebar'], h: sidebarHue }),
+    sidebarForeground: oklch({ ...sidebarToken['--sidebar-foreground'], h: sidebarHue }),
+    sidebarAccent: oklch({ ...sidebarToken['--sidebar-accent'], h: sidebarHue }),
+    radiusRem,
   };
 }
+
+// "What does this look like today, before customizing" hex values for the
+// color pickers in BrandingManager/SetupForm — so an unset field shows its
+// true current color instead of a misleading plain black square.
+export function defaultPrimaryHex(): string {
+  return oklchToHex({ l: 0.24, c: 0.012, h: DEFAULT_PRIMARY_HUE });
+}
+
+export function defaultAccentHex(): string {
+  return oklchToHex({ l: 0.75, c: 0.11, h: DEFAULT_ACCENT_HUE });
+}
+
+export function defaultAccentFamilyHex(family: AccentFamily): string {
+  return oklchToHex(ACCENT_TOKENS.light[family].swatch);
+}
+
+export type { AccentFamily };

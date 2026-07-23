@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildThemeStyle, hexToHue, previewPalette } from './theme';
+import {
+  buildThemeStyle,
+  hexToHue,
+  previewPalette,
+  defaultPrimaryHex,
+  defaultAccentHex,
+  defaultAccentFamilyHex,
+} from './theme';
 
 describe('hexToHue', () => {
   // Reference OKLCH values are the well-known conversions for sRGB primaries
@@ -35,28 +42,43 @@ describe('buildThemeStyle', () => {
     expect(buildThemeStyle({ primaryColor: null, accentColor: null, radiusRem: null, sidebarStyle: null })).toBe('');
   });
 
-  it('emits :root and .dark blocks when an accent color is set', () => {
+  it('accent color touches charts/sidebar-primary but never the named badges', () => {
     const css = buildThemeStyle({ accentColor: '#0000ff' });
     expect(css).toContain(':root {');
     expect(css).toContain('.dark {');
-    expect(css).toContain('--accent-blue:');
     expect(css).toContain('--chart-4:');
+    expect(css).toContain('--sidebar-primary:');
+    // Named badges must never be touched by accentColor alone — a badge
+    // labeled "Azul" rendering some arbitrary rotated hue (e.g. red) is the
+    // exact bug this locks in against.
+    expect(css).not.toContain('--accent-blue:');
+    expect(css).not.toContain('--accent-yellow:');
   });
 
-  it('primary color only touches primary/ring, not the pastel accents', () => {
+  it('primary color only touches primary/ring, not the pastel accents or charts', () => {
     const css = buildThemeStyle({ primaryColor: '#ff0000' });
     expect(css).toContain('--primary:');
     expect(css).toContain('--ring:');
     expect(css).not.toContain('--accent-blue:');
+    expect(css).not.toContain('--chart-1:');
   });
 
-  it('a per-family override changes only that family, not the charts', () => {
+  it('a per-family override changes only that named badge, never the charts', () => {
     const overridden = buildThemeStyle({ accentColor: '#0000ff', accentOverrides: { pink: '#ff0000' } });
-    const notOverridden = buildThemeStyle({ accentColor: '#0000ff' });
-    const pinkLine = (css: string) => css.match(/--accent-pink: (oklch\([^)]+\));/)?.[1];
-    const chart2Line = (css: string) => css.match(/--chart-2: (oklch\([^)]+\));/)?.[1];
-    expect(pinkLine(overridden)).not.toBe(pinkLine(notOverridden));
-    expect(chart2Line(overridden)).toBe(chart2Line(notOverridden));
+    expect(overridden).toContain('--accent-pink:');
+    expect(overridden).not.toContain('--accent-yellow:');
+    const chart2Line = overridden.match(/--chart-2: (oklch\([^)]+\));/)?.[1];
+    const chart2WithoutOverride = buildThemeStyle({ accentColor: '#0000ff' }).match(
+      /--chart-2: (oklch\([^)]+\));/,
+    )?.[1];
+    expect(chart2Line).toBe(chart2WithoutOverride);
+  });
+
+  it('an override with no accentColor set still only emits that one badge', () => {
+    const css = buildThemeStyle({ accentOverrides: { yellow: '#00ff00' } });
+    expect(css).toContain('--accent-yellow:');
+    expect(css).not.toContain('--chart-1:');
+    expect(css).not.toContain('--accent-pink:');
   });
 
   it('only overrides sidebar tokens when sidebarStyle is "brand"', () => {
@@ -80,8 +102,23 @@ describe('buildThemeStyle', () => {
 });
 
 describe('previewPalette', () => {
+  it('keeps the 5 named badges at their true default color regardless of accentColor', () => {
+    const withoutAccent = previewPalette({}, 'light');
+    const withAccent = previewPalette({ accentColor: '#ff0000' }, 'light');
+    for (const family of ['yellow', 'pink', 'green', 'blue', 'lilac'] as const) {
+      expect(withAccent.accents[family].swatch).toBe(withoutAccent.accents[family].swatch);
+    }
+  });
+
+  it('an override changes only that one badge', () => {
+    const base = previewPalette({}, 'light');
+    const overridden = previewPalette({ accentOverrides: { blue: '#ff0000' } }, 'light');
+    expect(overridden.accents.blue.swatch).not.toBe(base.accents.blue.swatch);
+    expect(overridden.accents.yellow.swatch).toBe(base.accents.yellow.swatch);
+  });
+
   it('keeps the 5 accent families visually distinct', () => {
-    const palette = previewPalette({ accentColor: '#0000ff' }, 'light');
+    const palette = previewPalette({}, 'light');
     const swatches = Object.values(palette.accents).map((a) => a.swatch);
     expect(new Set(swatches).size).toBe(5);
   });
@@ -90,5 +127,30 @@ describe('previewPalette', () => {
     const light = previewPalette({}, 'light');
     const dark = previewPalette({}, 'dark');
     expect(light.background).not.toBe(dark.background);
+  });
+
+  it('reflects sidebarStyle "brand" using the primary color, and defaults otherwise', () => {
+    const dark = previewPalette({ primaryColor: '#ff0000', sidebarStyle: 'dark' }, 'light');
+    const brand = previewPalette({ primaryColor: '#ff0000', sidebarStyle: 'brand' }, 'light');
+    expect(brand.sidebar).not.toBe(dark.sidebar);
+  });
+
+  it('resolves radiusRem to a default when unset, and clamps when set', () => {
+    expect(previewPalette({}, 'light').radiusRem).toBeGreaterThan(0);
+    expect(previewPalette({ radiusRem: 5 }, 'light').radiusRem).toBe(2);
+    expect(previewPalette({ radiusRem: -1 }, 'light').radiusRem).toBe(0);
+  });
+});
+
+describe('default hex helpers', () => {
+  it('return well-formed 6-digit hex strings', () => {
+    expect(defaultPrimaryHex()).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(defaultAccentHex()).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(defaultAccentFamilyHex('yellow')).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+
+  it('produce a different hex per accent family', () => {
+    const hexes = (['yellow', 'pink', 'green', 'blue', 'lilac'] as const).map(defaultAccentFamilyHex);
+    expect(new Set(hexes).size).toBe(5);
   });
 });

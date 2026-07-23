@@ -11,6 +11,7 @@ import { ColorField } from '@/components/ui/color-field';
 import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 import { PasswordStrengthMeter } from '@/components/auth/PasswordStrengthMeter';
 import { ThemePreview } from '@/components/admin/ThemePreview';
+import { defaultPrimaryHex, defaultAccentHex } from '@/lib/theme';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-strength';
 
@@ -240,12 +241,14 @@ export function SetupForm({ supabaseUrl, supabaseAnonKey, turnstileSiteKey }: Se
                       label="Color primario"
                       value={primaryColor}
                       onChange={setPrimaryColor}
+                      defaultHex={defaultPrimaryHex()}
                     />
                     <ColorField
                       id="setup-accent-color"
                       label="Color de acento"
                       value={accentColor}
                       onChange={setAccentColor}
+                      defaultHex={defaultAccentHex()}
                     />
                   </div>
                   <ThemePreview primaryColor={primaryColor} accentColor={accentColor} />

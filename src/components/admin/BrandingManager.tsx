@@ -8,6 +8,7 @@ import { FileDropzone } from '@/components/ui/file-dropzone';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ColorField } from '@/components/ui/color-field';
 import { ThemePreview } from '@/components/admin/ThemePreview';
+import { defaultPrimaryHex, defaultAccentHex, defaultAccentFamilyHex } from '@/lib/theme';
 import type { Branding } from '@/lib/branding';
 
 interface BrandingManagerProps {
@@ -187,17 +188,19 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
                 label="Color primario"
                 value={primaryColor}
                 onChange={setPrimaryColor}
+                defaultHex={defaultPrimaryHex()}
               />
               <ColorField
                 id="branding-accent-color"
                 label="Color de acento"
                 value={accentColor}
                 onChange={setAccentColor}
+                defaultHex={defaultAccentHex()}
               />
             </div>
             <p className="text-muted-foreground -mt-2 text-xs">
-              El color primario tiñe botones y el foco de los campos. El color de acento tiñe los 5 colores secundarios
-              (badges, gráficos) manteniendo su contraste.
+              El color primario tiñe botones y el foco de los campos. El color de acento tiñe los gráficos y el realce
+              del sidebar. Los 5 badges de abajo mantienen su color de siempre a menos que los personalices vos.
             </p>
 
             <details className="group">
@@ -212,22 +215,11 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
                     label={ACCENT_OVERRIDE_LABELS[family]}
                     value={value}
                     onChange={setValue}
+                    defaultHex={defaultAccentFamilyHex(family)}
                   />
                 ))}
               </div>
             </details>
-
-            <ThemePreview
-              primaryColor={primaryColor}
-              accentColor={accentColor}
-              accentOverrides={{
-                yellow: accentYellowColor,
-                pink: accentPinkColor,
-                green: accentGreenColor,
-                blue: accentBlueColor,
-                lilac: accentLilacColor,
-              }}
-            />
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="branding-radius">Redondeo de esquinas</Label>
@@ -274,7 +266,25 @@ export function BrandingManager({ initialBranding }: BrandingManagerProps) {
               label="Color de QR por defecto"
               value={qrDarkColor}
               onChange={setQrDarkColor}
+              defaultHex="#000000"
             />
+
+            <div className="flex flex-col gap-2">
+              <Label>Vista previa</Label>
+              <ThemePreview
+                primaryColor={primaryColor}
+                accentColor={accentColor}
+                accentOverrides={{
+                  yellow: accentYellowColor,
+                  pink: accentPinkColor,
+                  green: accentGreenColor,
+                  blue: accentBlueColor,
+                  lilac: accentLilacColor,
+                }}
+                radiusRem={radiusRem}
+                sidebarStyle={sidebarStyle}
+              />
+            </div>
           </div>
 
           <Button type="submit" disabled={loading} className="self-start">
