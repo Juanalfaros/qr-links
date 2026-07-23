@@ -3,6 +3,12 @@
 Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.3.1] - 2026-07-23
+
+### Cambiado
+
+- Las ~36 migraciones SQL incrementales (`supabase/migrations/0001` a `0036`) se consolidan en un único archivo, `supabase/migrations/0001_baseline.sql`, que crea directamente el schema final — sin recrear pasos intermedios que una migración posterior modificó o revirtió (funciones reescritas varias veces, columnas agregadas y luego eliminadas, vistas reemplazadas por funciones, etc.). Una instalación nueva ahora solo corre un archivo en vez de 36. Las migraciones originales quedan en `supabase/migrations_archive/` como referencia histórica; no se aplican en ninguna instalación. **No afecta instancias ya desplegadas** — su schema ya aplicado no cambia.
+
 ## [0.3.0] - 2026-07-23
 
 ### Cambiado

@@ -35,7 +35,7 @@ Acortador de enlaces dinámico y generador de códigos QR corporativo, multiusua
 
 2. Crea un proyecto en [supabase.com/dashboard](https://supabase.com/dashboard). Cuando esté listo, ve a **Project Settings → API** y copia: Project URL, `anon` public key, y `service_role` key.
 
-3. Aplica las migraciones en orden. Cópialas desde `supabase/migrations/*.sql` (en orden numérico) y pégalas en el **SQL Editor** del dashboard de Supabase, o usa el [Supabase CLI](https://supabase.com/docs/guides/cli) (`supabase link` + `supabase db push`).
+3. Aplica la migración. Copia el contenido de `supabase/migrations/0001_baseline.sql` (un único archivo con el schema completo) y pégalo en el **SQL Editor** del dashboard de Supabase, o usa el [Supabase CLI](https://supabase.com/docs/guides/cli) (`supabase link` + `supabase db push`). El historial de cómo evolucionó el schema (36 migraciones incrementales, ya consolidadas acá) queda como referencia en `supabase/migrations_archive/`.
 
 4. Copia `.dev.vars.example` a `.dev.vars` y completa los valores reales. **Nada de este archivo se commitea** (está en `.gitignore`) — es la única fuente de valores específicos de tu instancia, tanto en desarrollo como los que luego replicás en producción:
 
@@ -133,7 +133,8 @@ src/
   pages/            # Rutas de Astro (incluye api/ para las rutas de servidor)
   middleware.ts     # Resolución de sesión y protección de rutas /admin, /superadmin
 supabase/
-  migrations/       # Migraciones SQL en orden numérico
+  migrations/       # 0001_baseline.sql — schema completo, único archivo a correr
+  migrations_archive/ # Historial de las migraciones incrementales originales (solo referencia, no se aplican)
 scripts/
   generate-wrangler-config.mjs  # wrangler.template.jsonc + .dev.vars -> wrangler.jsonc (gitignored)
 ```
