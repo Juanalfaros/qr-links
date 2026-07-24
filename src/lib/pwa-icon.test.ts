@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeIconLayout } from './pwa-icon';
+import { computeIconLayout, maskableBackgroundFromCorners } from './pwa-icon';
 
 describe('computeIconLayout', () => {
   it('centers a square source filling the full target when safeZoneRatio is 1', () => {
@@ -31,5 +31,29 @@ describe('computeIconLayout', () => {
     expect(layout.dw).toBeLessThan(192);
     expect(layout.dx).toBeGreaterThan(0);
     expect(layout.dy).toBeCloseTo(0, 5);
+  });
+});
+
+describe('maskableBackgroundFromCorners', () => {
+  const opaque = (r: number, g: number, b: number) => ({ r, g, b, a: 255 });
+
+  it('uses the averaged corner color when the art bleeds to every edge', () => {
+    // Full-bleed navy icon — all corners opaque navy → navy background, no ring.
+    const navy = opaque(30, 42, 74);
+    expect(maskableBackgroundFromCorners([navy, navy, navy, navy], '#ffffff')).toBe('rgb(30, 42, 74)');
+  });
+
+  it('averages slightly different corners (gradient / anti-aliasing)', () => {
+    const corners = [opaque(10, 20, 30), opaque(20, 30, 40), opaque(30, 40, 50), opaque(40, 50, 60)];
+    expect(maskableBackgroundFromCorners(corners, '#ffffff')).toBe('rgb(25, 35, 45)');
+  });
+
+  it('falls back when any corner is transparent (logo on transparency)', () => {
+    const corners = [opaque(30, 42, 74), opaque(30, 42, 74), opaque(30, 42, 74), { r: 0, g: 0, b: 0, a: 0 }];
+    expect(maskableBackgroundFromCorners(corners, '#123456')).toBe('#123456');
+  });
+
+  it('falls back when no corners are provided', () => {
+    expect(maskableBackgroundFromCorners([], '#ffffff')).toBe('#ffffff');
   });
 });
